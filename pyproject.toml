@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=84.0.0", "wheel>=0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repocodex"
+version = "1.0.0"
+description = "Repository-native executable memory for coding agents"
+readme = "README.md"
+requires-python = ">=3.14"
+license = { text = "MIT" }
+authors = [{ name = "RepoCodex" }]
+dependencies = [
+    "typer>=0.27.1",
+    "pydantic>=2.13.4",
+    "pyyaml>=6.0.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1.1",
+]
+mcp = [
+    "mcp>=2.1.1",
+]
+
+[project.scripts]
+repocodex = "repocodex.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+repocodex = ["data/**/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

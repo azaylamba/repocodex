@@ -1,0 +1,7 @@
+{
+  "name": "repocodex",
+  "version": "1.0.0",
+  "description": "Executable repository memory: context, impact, attested writes, and deterministic validation.",
+  "skills": "./skills",
+  "mcp": "./mcp.json"
+}

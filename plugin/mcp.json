@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "repocodex": {
+      "command": "python3",
+      "args": ["-m", "repocodex", "mcp"]
+    }
+  }
+}

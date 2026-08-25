@@ -1,0 +1,4 @@
+#!/bin/sh
+# Cursor/Claude adapter: run the portable git pre-commit floor.
+# Agent Plugins 1.0 does not carry hooks; this extra wires the same CLI.
+exec "$(dirname "$0")/../hooks/pre-commit"

@@ -1,0 +1,23 @@
+#!/bin/sh
+# RepoCodex pre-commit hook.
+# Filters `git commit` here rather than relying on client-side file matchers.
+# Denies the commit while any validated anchor on the staged diff is DRIFT
+# (unless posture=shadow).
+
+set -e
+
+if command -v repocodex >/dev/null 2>&1; then
+  CMD="repocodex"
+else
+  CMD="python3 -m repocodex"
+fi
+
+output="$($CMD validate --diff --staged --hook)" || status=$?
+status=${status:-0}
+echo "$output"
+if [ "$status" -ne 0 ]; then
+  echo "RepoCodex: commit denied (unrepaired DRIFT or deterministic check failure)." >&2
+  echo "$output" >&2
+  exit 1
+fi
+exit 0
