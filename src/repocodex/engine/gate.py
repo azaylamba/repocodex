@@ -2,21 +2,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-import fnmatch
+import tempfile
 
-from repocodex.config import RepoConfig
+from repocodex.config import RepoConfig, matches_exclusion, normalize_repo_path
 from repocodex.engine.match import (
     is_marker_term,
     is_regex_term,
+    claim_in_terms,
+    literal_as_token,
     match_anchor,
     min_match_for,
     only_import_hits,
     read_pinned,
-    term_in_text,
 )
 from repocodex.schema import ConceptDocument
 from repocodex.tools.git import git_check_ignore
-from repocodex.tools.ripgrep import rg_count
+from repocodex.tools.ripgrep import rg_count, run_rg
 
 
 SUGGESTIONS = [
@@ -44,21 +45,36 @@ class GateResult:
 
 
 def path_excluded(path: str, config: RepoConfig) -> bool:
-    normalized = path.replace("\\", "/").lstrip("./")
+    normalized = normalize_repo_path(path)
     if git_check_ignore(normalized, config.root):
         return True
-    for glob in config.all_exclusions:
-        if fnmatch.fnmatch(normalized, glob) or fnmatch.fnmatch(Path(normalized).name, glob):
-            return True
-        if glob.endswith("/**") and normalized.startswith(glob[:-3]):
-            return True
-    return False
+    return matches_exclusion(normalized, config.all_exclusions)
 
 
 def _term_count(term: str, config: RepoConfig) -> int:
     fixed = not is_regex_term(term)
     pattern = term[1:-1] if is_regex_term(term) else term
     return rg_count(pattern, config.root, fixed=fixed, exclusions=config.all_exclusions)
+
+
+def _regex_dialects_agree(term: str, root: Path) -> bool:
+    if not is_regex_term(term):
+        return True
+    pattern = term[1:-1]
+    try:
+        import re
+
+        re.compile(pattern)
+        py_ok = True
+    except re.error:
+        py_ok = False
+    with tempfile.NamedTemporaryFile(prefix="repocodex-rg-", suffix=".txt", delete=True) as handle:
+        handle.write(b"\n")
+        handle.flush()
+        result = run_rg(["--quiet", "--", pattern, handle.name], cwd=root)
+    rg_err = (result.stderr or "").lower()
+    rg_ok = "regex parse error" not in rg_err and result.returncode != 2
+    return py_ok and rg_ok
 
 
 def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
@@ -93,6 +109,9 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
             reasons.append("at most one marker term is allowed")
 
         for term in anchor.all_of:
+            if is_regex_term(term) and not _regex_dialects_agree(term, config.root):
+                tighten.append("regex_dialect")
+                reasons.append(f'regex term "{term}" is not portable across Python re and ripgrep')
             term_counts[term] = _term_count(term, config)
 
         text = read_pinned(config.root, anchor.path)
@@ -134,16 +153,18 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
             reasons.append(f"import-line terms only for {anchor.path}")
 
         if doc.frontmatter.claims:
-            region_text = full_regions[0].source(text.splitlines()) if full_regions else text
-            joined_terms = " ".join(anchor.all_of)
-            for claim in doc.frontmatter.claims:
-                in_terms = claim.literal in joined_terms or any(
-                    claim.literal in term for term in anchor.all_of
-                )
-                in_source = term_in_text(claim.literal, region_text) or claim.literal in region_text
-                if not in_terms or not in_source:
+            if not full_regions:
+                for claim in doc.frontmatter.claims:
                     tighten.append("claim_not_anchored")
                     reasons.append(f'claim "{claim.literal}" is not anchored')
+            else:
+                region_text = full_regions[0].source(text.splitlines())
+                for claim in doc.frontmatter.claims:
+                    in_terms = claim_in_terms(claim.literal, anchor.all_of)
+                    in_source = literal_as_token(claim.literal, region_text)
+                    if not in_terms or not in_source:
+                        tighten.append("claim_not_anchored")
+                        reasons.append(f'claim "{claim.literal}" is not anchored')
 
     tighten = list(dict.fromkeys(tighten))
     accepted = not tighten
@@ -152,6 +173,11 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
         suggestions = [
             "use the enum literal or the user-facing error string as a term",
             *SUGGESTIONS,
+        ]
+    if "regex_dialect" in tighten:
+        suggestions = [
+            "use a fixed-string stable token instead of a dialect-specific regex",
+            *suggestions,
         ]
     return GateResult(
         accepted=accepted,

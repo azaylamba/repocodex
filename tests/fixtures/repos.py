@@ -205,6 +205,7 @@ def write_architecture_fixtures(root: Path) -> SampleRepo:
 
     (root / ".repocodex.toml").write_text(DEFAULT_CONFIG, encoding="utf-8")
     (root / ".repocodexignore").write_text("generated/**\n", encoding="utf-8")
+    (root / ".gitignore").write_text(".repocodex/metrics.jsonl\n", encoding="utf-8")
 
     from repocodex.store.reverse_index import regenerate_all
 

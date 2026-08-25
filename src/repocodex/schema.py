@@ -28,6 +28,7 @@ class ConceptStatus(str, Enum):
 class Claim(BaseModel):
     model_config = ConfigDict(extra="allow")
     literal: str
+    subject: str | None = None
 
 
 class Anchor(BaseModel):

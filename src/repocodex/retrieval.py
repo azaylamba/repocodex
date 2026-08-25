@@ -4,17 +4,24 @@ from pathlib import Path
 
 from repocodex.engine.impact import linked_identities
 from repocodex.schema import ConceptDocument, ConceptStatus
-from repocodex.store.bundle import load_concepts
+from repocodex.store.bundle import discover_context_roots, load_concepts
 from repocodex.store.reverse_index import merged_index
 from repocodex.tools.git import run_git
 
 
+def _concept_file(root: Path, identity: str) -> Path | None:
+    for ctx in discover_context_roots(root):
+        path = ctx / f"{identity}.md"
+        if path.is_file():
+            return path
+    fallback = root / ".context" / f"{identity}.md"
+    return fallback if fallback.is_file() else None
+
+
 def _churn_count(root: Path, identity: str) -> int:
-    # Infer from git history of the concept file; never stored.
-    result = run_git(
-        ["log", "--follow", "--pretty=%H", "--", f".context/{identity}.md"],
-        cwd=root,
-    )
+    path = _concept_file(root, identity)
+    rel = str(path.relative_to(root)).replace("\\", "/") if path else f".context/{identity}.md"
+    result = run_git(["log", "--follow", "--pretty=%H", "--", rel], cwd=root)
     commits = [line for line in result.stdout.splitlines() if line.strip()]
     return len(commits)
 
@@ -29,6 +36,37 @@ def rank_score(doc: ConceptDocument, root: Path) -> float:
         score += 10.0
     score -= float(_churn_count(root, doc.identity)) * 5.0
     return score
+
+
+def _catalog_siblings(root: Path, doc: ConceptDocument, selected_ids: set[str]) -> list[dict]:
+    path = _concept_file(root, doc.identity)
+    if path is None:
+        return []
+    index_path = path.parent / "index.md"
+    if not index_path.is_file():
+        return []
+    prefix = doc.identity.rsplit("/", 1)[0] if "/" in doc.identity else ""
+    siblings: list[dict] = []
+    seen: set[str] = set()
+    for line in index_path.read_text(encoding="utf-8").splitlines():
+        if "](" not in line:
+            continue
+        start = line.find("](")
+        end = line.find(")", start)
+        href = line[start + 2 : end].strip()
+        name = Path(href).name
+        if not name.endswith(".md"):
+            continue
+        leaf = name[: -len(".md")]
+        identity = f"{prefix}/{leaf}" if prefix else leaf
+        if identity in selected_ids or identity == doc.identity or identity in seen:
+            continue
+        title_start = line.find("[")
+        title_end = line.find("]")
+        title = line[title_start + 1 : title_end] if title_start >= 0 and title_end > title_start else leaf
+        seen.add(identity)
+        siblings.append({"identity": identity, "title": title, "type": None})
+    return siblings
 
 
 def retrieve(
@@ -54,8 +92,9 @@ def retrieve(
             if doc not in selected:
                 selected.append(doc)
     selected.sort(key=lambda doc: rank_score(doc, root), reverse=True)
+    selected_ids = {doc.identity for doc in selected}
     related: list[dict] = []
-    seen = {doc.identity for doc in selected}
+    seen = set(selected_ids)
     for doc in selected:
         for linked in linked_identities(doc):
             if linked in seen:
@@ -69,6 +108,15 @@ def retrieve(
                     "type": other.frontmatter.type.value if other else None,
                 }
             )
+        for sibling in _catalog_siblings(root, doc, selected_ids):
+            if sibling["identity"] in seen:
+                continue
+            seen.add(sibling["identity"])
+            other = by_id.get(sibling["identity"])
+            if other:
+                sibling["title"] = other.frontmatter.title or sibling["title"]
+                sibling["type"] = other.frontmatter.type.value
+            related.append(sibling)
     payload_concepts = []
     for doc in selected:
         item = {
@@ -82,8 +130,12 @@ def retrieve(
         if include_bodies:
             item["body"] = doc.body
         payload_concepts.append(item)
+    catalog: list[dict] = []
+    for doc in selected:
+        catalog.extend(_catalog_siblings(root, doc, selected_ids))
     return {
         "paths": paths,
         "concepts": payload_concepts,
         "related": related,
+        "catalog": catalog,
     }

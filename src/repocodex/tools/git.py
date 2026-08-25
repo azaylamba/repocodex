@@ -41,3 +41,15 @@ def git_version(cwd: Path | str | None = None) -> str:
 def git_check_ignore(path: str, cwd: Path) -> bool:
     result = run_git(["check-ignore", "-q", path], cwd=cwd)
     return result.returncode == 0
+
+
+def git_ls_files(cwd: Path) -> list[str]:
+    result = run_git(["ls-files", "-z"], cwd=cwd)
+    if result.returncode != 0:
+        return []
+    return [path for path in result.stdout.split("\0") if path]
+
+
+def git_is_tracked(path: str, cwd: Path) -> bool:
+    result = run_git(["ls-files", "--error-unmatch", "--", path], cwd=cwd)
+    return result.returncode == 0

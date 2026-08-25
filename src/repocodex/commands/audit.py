@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -9,7 +10,7 @@ from repocodex.engine.contradiction import contradiction_flags
 from repocodex.engine.gate import _term_count
 from repocodex.engine.match import evaluate_file, read_pinned
 from repocodex.schema import ConceptStatus, envelope, utc_now
-from repocodex.store.bundle import append_log, deprecate_concept, discover_context_roots, load_concepts
+from repocodex.store.bundle import deprecate_concept, load_concepts
 from repocodex.store.reverse_index import merged_index
 
 
@@ -25,7 +26,6 @@ def _expired(stale_after: str | None) -> bool:
 def gc(repo: Path) -> list[str]:
     retired: list[str] = []
     concepts = load_concepts(repo)
-    index = merged_index(repo)
     inbound: set[str] = set()
     from repocodex.engine.impact import linked_identities
 
@@ -46,7 +46,13 @@ def gc(repo: Path) -> list[str]:
     return retired
 
 
-def audit(repo: Path, *, sample_size: int | None = None, seed: int = 0) -> dict:
+def audit(
+    repo: Path,
+    *,
+    sample_size: int | None = None,
+    seed: int = 0,
+    findings_path: Path | None = None,
+) -> dict:
     config = load_config(repo)
     concepts = [doc for doc in load_concepts(repo) if doc.status == ConceptStatus.stable]
     n = sample_size or config.audit_sample_size
@@ -83,18 +89,38 @@ def audit(repo: Path, *, sample_size: int | None = None, seed: int = 0) -> dict:
         scored.append({"identity": doc.identity, "term_counts": term_counts})
     contradictions = contradiction_flags(load_concepts(repo), repo)
     retired = gc(repo)
-    roots = discover_context_roots(repo)
-    if roots:
-        append_log(roots[0], f"audit sampled {len(sample)} concepts")
+    proposals: list[dict] = []
+    if findings_path:
+        data = json.loads(Path(findings_path).read_text(encoding="utf-8"))
+        items = data if isinstance(data, list) else data.get("findings") or data.get("results") or []
+        for item in items:
+            identity = item.get("identity") or item.get("concept")
+            if not identity:
+                continue
+            proposals.append(
+                {
+                    "kind": "CONTRADICTION",
+                    "reason": "audit_screening",
+                    "concept": identity,
+                    "proposal": True,
+                    "detail": item,
+                }
+            )
     return envelope(
         {
             "sampled": [doc.identity for doc in sample],
             "distinctiveness": scored,
             "weak_anchors": weak,
             "contradictions": contradictions,
+            "contradiction_proposals": proposals,
             "gc_deprecated": retired,
             "screening": screening,
-            "note": "model screening is advisory; findings become CONTRADICTION proposals only",
+            "model_invoked": False,
+            "note": (
+                "repocodex audit emits a screening payload for out-of-band model review; "
+                "no model is invoked inside the engine. Returned findings become CONTRADICTION "
+                "proposals resolved through the attested-write path, never automatic edits."
+            ),
             "at": utc_now(),
         }
     )

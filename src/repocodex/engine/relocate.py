@@ -17,9 +17,16 @@ class Relocation:
     candidates: list[dict] = field(default_factory=list)
 
 
-def parse_renames(cwd: Path, base: str | None = None) -> dict[str, str]:
+def parse_renames(
+    cwd: Path,
+    *,
+    staged: bool = False,
+    base: str | None = None,
+) -> dict[str, str]:
     args = ["diff", "-M", "--name-status"]
-    if base:
+    if staged:
+        args.append("--cached")
+    elif base:
         args.append(base)
     result = run_git(args, cwd=cwd)
     mapping: dict[str, str] = {}
@@ -49,9 +56,10 @@ def relocate_anchor(
     anchor: Anchor,
     config: RepoConfig,
     *,
-    diff_files: list[str] | None = None,
+    staged: bool = False,
+    base: str | None = None,
 ) -> Relocation:
-    renames = parse_renames(config.root)
+    renames = parse_renames(config.root, staged=staged, base=base)
     if anchor.path in renames:
         new_path = renames[anchor.path]
         relocated = Anchor(
@@ -66,7 +74,7 @@ def relocate_anchor(
             return Relocation(
                 unique=True,
                 via="rename",
-                candidates=[{"path": new_path, "via": "git diff -M"}],
+                candidates=[{"path": new_path, "via": "git diff -M", "terms": list(anchor.all_of)}],
             )
 
     term = _most_distinctive_term(anchor, config)
@@ -94,7 +102,7 @@ def relocate_anchor(
         )
         matched = match_anchor(probe, text, default_scope=config.scope_lines)
         if any(len(region.terms_hit) >= len(anchor.all_of) for region in matched.regions):
-            candidates.append({"path": rel, "via": f"pickaxe:{term}"})
+            candidates.append({"path": rel, "via": f"pickaxe:{term}", "terms": list(anchor.all_of)})
 
     if not candidates:
         pickaxe = run_git(["log", "-S", term, "--name-only", "--pretty=format:"], cwd=config.root)
@@ -110,7 +118,7 @@ def relocate_anchor(
             probe = Anchor(path=path, all_of=anchor.all_of, near=anchor.near)
             matched = match_anchor(probe, text, default_scope=config.scope_lines)
             if any(len(region.terms_hit) >= len(anchor.all_of) for region in matched.regions):
-                candidates.append({"path": path, "via": f"pickaxe:{term}"})
+                candidates.append({"path": path, "via": f"pickaxe:{term}", "terms": list(anchor.all_of)})
 
     unique = len(candidates) == 1
     return Relocation(

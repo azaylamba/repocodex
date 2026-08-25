@@ -183,7 +183,7 @@ RepoCodex extensions (OKF allows unknown keys; consumers must preserve them):
 ### 5.3 Concept types
 
 - **TechnicalDecision** — narrative why bound to code. Must anchor at least one distinctive construct from the why (the term `yield`, an error string), not just a name.
-- **InvariantContract** — a must-still-hold claim. Declared `claims` literals are frozen into anchors so changing `3 → 1` breaks the match.
+- **InvariantContract** — a must-still-hold claim. Declared `claims` literals are frozen into anchors and re-checked on every validation as `CLAIM_BROKEN` when absent from the matched region (§6.2), so changing `3 → 1` is a blocking business-rule change rather than a WEAK term-count miss.
 - **BusinessWorkflow** — a cross-package flow with one anchor per participating site (§13.1). Kept thin: ordering, boundaries, links to per-step pages.
 - **GuardrailDecision** — the why behind a negative/global architectural rule, anchored to the **enforcement config** of the tool that enforces it (§13.3).
 

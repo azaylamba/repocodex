@@ -12,6 +12,7 @@ IMPORT_RE = re.compile(
     re.IGNORECASE,
 )
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+TOKEN_CHAR = r"[A-Za-z0-9_]"
 
 
 def is_regex_term(term: str) -> bool:
@@ -44,6 +45,20 @@ def term_hits(term: str, lines: list[str]) -> list[int]:
 
 def term_in_text(term: str, text: str) -> bool:
     return bool(compile_term(term).search(text))
+
+
+def literal_as_token(literal: str, text: str) -> bool:
+    """True when `literal` appears as its own token in `text`, not as a substring."""
+    if not literal or not text:
+        return False
+    escaped = re.escape(literal)
+    if re.fullmatch(rf"{TOKEN_CHAR}+", literal):
+        return bool(re.search(rf"(?<!{TOKEN_CHAR}){escaped}(?!{TOKEN_CHAR})", text))
+    return literal in text
+
+
+def claim_in_terms(literal: str, terms: list[str]) -> bool:
+    return any(literal_as_token(literal, term) or literal == term for term in terms)
 
 
 @dataclass

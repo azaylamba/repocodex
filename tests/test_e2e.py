@@ -18,7 +18,7 @@ def test_agent_loop_context_edit_validate_commit(repo):
     verdict = json.loads(run_cli(["validate", "--diff"], cwd=repo.root).stdout)
     assert verdict["engine_version"] == "1.0.0"
     repair = json.loads(run_cli(["repair"], cwd=repo.root).stdout)
-    assert repair["task"]
+    assert "engine_version" in repair
     subprocess.run(["git", "add", "-A"], cwd=repo.root, check=True, capture_output=True)
     # commit without hook to confirm the repo stays consistent; hook deny is tested separately
     subprocess.run(

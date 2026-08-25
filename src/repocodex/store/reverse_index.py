@@ -55,8 +55,9 @@ def load_reverse_index(context_root: Path) -> dict[str, list[str]]:
     return parse_index_text(path.read_text(encoding="utf-8"))
 
 
-def expected_index(context_root: Path) -> dict[str, list[str]]:
+def expected_index(context_root: Path, repo: Path | None = None) -> dict[str, list[str]]:
     docs: list[ConceptDocument] = []
+    seen: set[str] = set()
     for path in concept_files(context_root):
         text = path.read_text(encoding="utf-8")
         data, _body = split_frontmatter(text)
@@ -64,11 +65,38 @@ def expected_index(context_root: Path) -> dict[str, list[str]]:
             continue
         identity = identity_from_path(str(context_root), str(path))
         docs.append(parse_concept(text, identity))
+        seen.add(identity)
+    if repo is not None:
+        repo = repo.resolve()
+        root_bundle = repo / ".context"
+        if context_root.resolve() != root_bundle.resolve() and root_bundle.is_dir():
+            try:
+                prefix = str(context_root.parent.relative_to(repo)).replace("\\", "/").rstrip("/") + "/"
+            except ValueError:
+                prefix = ""
+            if prefix:
+                for path in concept_files(root_bundle):
+                    text = path.read_text(encoding="utf-8")
+                    data, _body = split_frontmatter(text)
+                    if "type" not in data or "verification" not in data:
+                        continue
+                    identity = identity_from_path(str(root_bundle), str(path))
+                    if identity in seen:
+                        continue
+                    doc = parse_concept(text, identity)
+                    if any(pin.replace("\\", "/").startswith(prefix) for pin in doc.pinned_paths):
+                        docs.append(doc)
+                        seen.add(identity)
     return mapping_from_concepts(docs)
 
 
-def write_reverse_index(context_root: Path, mapping: dict[str, list[str]] | None = None) -> Path:
-    mapping = mapping if mapping is not None else expected_index(context_root)
+def write_reverse_index(
+    context_root: Path,
+    mapping: dict[str, list[str]] | None = None,
+    *,
+    repo: Path | None = None,
+) -> Path:
+    mapping = mapping if mapping is not None else expected_index(context_root, repo)
     path = context_root / "reverse-index.md"
     path.write_text(render_index(mapping), encoding="utf-8")
     return path
@@ -77,14 +105,14 @@ def write_reverse_index(context_root: Path, mapping: dict[str, list[str]] | None
 def regenerate_all(repo: Path) -> list[Path]:
     written: list[Path] = []
     for context_root in discover_context_roots(repo):
-        written.append(write_reverse_index(context_root))
+        written.append(write_reverse_index(context_root, repo=repo))
     return written
 
 
 def merged_index(repo: Path) -> dict[str, list[str]]:
     merged: dict[str, list[str]] = defaultdict(list)
     for context_root in discover_context_roots(repo):
-        for path, identities in expected_index(context_root).items():
+        for path, identities in expected_index(context_root, repo).items():
             for identity in identities:
                 if identity not in merged[path]:
                     merged[path].append(identity)
@@ -95,7 +123,7 @@ def index_sync_errors(repo: Path) -> list[dict]:
     errors: list[dict] = []
     for context_root in discover_context_roots(repo):
         committed = load_reverse_index(context_root)
-        expected = expected_index(context_root)
+        expected = expected_index(context_root, repo)
         if committed != expected:
             errors.append(
                 {

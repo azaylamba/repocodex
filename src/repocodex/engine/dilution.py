@@ -30,6 +30,12 @@ def dilution_warnings(
     added_lines = [
         line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++")
     ]
+    for path in changed_files:
+        target = config.root / path
+        if not target.is_file():
+            continue
+        if f"b/{path}" not in diff and f"b/{path.replace('\\', '/')}" not in diff:
+            added_lines.extend(target.read_text(encoding="utf-8", errors="replace").splitlines())
     added = "\n".join(added_lines)
     warnings: list[dict] = []
     for doc in concepts:

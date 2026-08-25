@@ -22,16 +22,42 @@ jobs:
         run: |
           PIN=$(python3 -c "import tomllib,pathlib; p=pathlib.Path('.repocodex.toml');
 print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '1.0.0')")
-          pip install "repocodex==${PIN}" || pip install -e .
+          pip install "repocodex==${PIN}"
+      - name: Resolve memory-exempt acknowledgment
+        id: ack
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = (context.payload.pull_request?.labels || []).map(l => l.name);
+            core.setOutput('labels', labels.join(','));
+            if (!labels.includes('memory-exempt')) {
+              core.setOutput('evidence', '');
+              return;
+            }
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            const ack = (reviews.data || []).find(r =>
+              r.body && r.body.toLowerCase().includes('repocodex-ack')
+            );
+            core.setOutput('evidence', ack ? `review:${ack.id}` : '');
       - name: Validate diff
         env:
           GITHUB_PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          REPOCODEX_REVIEW_ACK_EVIDENCE: ${{ steps.ack.outputs.evidence }}
         run: |
           BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          EXEMPT=""
+          if [ -n "$REPOCODEX_REVIEW_ACK_EVIDENCE" ]; then
+            EXEMPT="--memory-exempt"
+          fi
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            repocodex validate --diff --check
+            repocodex validate --diff --check $EXEMPT
           else
-            repocodex validate --diff --base "${BASE}" --check
+            repocodex validate --diff --base "${BASE}" --check $EXEMPT
           fi
 
   advisory:
@@ -47,8 +73,16 @@ print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '1.0.0')
           python-version: "3.14"
       - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y ripgrep
-      - run: pip install -e . || pip install repocodex
+      - name: Install RepoCodex (pinned)
+        run: |
+          PIN=$(python3 -c "import tomllib,pathlib; p=pathlib.Path('.repocodex.toml');
+print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '1.0.0')")
+          pip install "repocodex==${PIN}"
       - name: Advisory findings
         run: |
-          echo "Review-agent findings are advisory only."
-          repocodex validate --diff || true
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            repocodex advisory
+          else
+            repocodex advisory --base "${BASE}"
+          fi

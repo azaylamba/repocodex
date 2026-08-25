@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import fnmatch
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from repocodex import ENGINE_VERSION
+from repocodex.schema import envelope
+from repocodex.tools.git import git_ls_files
 
 DEFAULT_EXCLUSIONS = [
     "vendor/**",
@@ -15,6 +18,22 @@ DEFAULT_EXCLUSIONS = [
     "**/.venv/**",
     "**/__pycache__/**",
 ]
+
+
+class EngineVersionMismatch(Exception):
+    def __init__(self, pinned: str, running: str) -> None:
+        super().__init__(f"engine_version_mismatch: pinned={pinned} running={running}")
+        self.pinned = pinned
+        self.running = running
+
+    def to_json(self) -> dict:
+        return envelope(
+            {
+                "error": "engine_version_mismatch",
+                "pinned": self.pinned,
+                "running": self.running,
+            }
+        )
 
 
 @dataclass
@@ -38,12 +57,31 @@ class RepoConfig:
         return seen
 
 
-def _default_ceiling(root: Path) -> int:
-    try:
-        files = [p for p in root.rglob("*") if p.is_file()]
-        n = max(1, len(files))
-    except OSError:
-        n = 100
+def normalize_repo_path(path: str) -> str:
+    normalized = path.replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def matches_exclusion(path: str, globs: list[str]) -> bool:
+    normalized = normalize_repo_path(path)
+    name = Path(normalized).name
+    for glob in globs:
+        if fnmatch.fnmatch(normalized, glob) or fnmatch.fnmatch(name, glob):
+            return True
+        if glob.endswith("/**") and normalized.startswith(glob[:-3]):
+            return True
+    return False
+
+
+def _default_ceiling(root: Path, exclusions: list[str]) -> int:
+    files = [
+        path
+        for path in git_ls_files(root)
+        if not matches_exclusion(path, exclusions)
+    ]
+    n = max(1, len(files)) if files else 1
     return max(20, min(500, n // 2 + 20))
 
 
@@ -58,18 +96,18 @@ def load_ignore_file(path: Path) -> list[str]:
     return globs
 
 
-def load_config(root: Path) -> RepoConfig:
+def load_config(root: Path, *, enforce_pin: bool = True) -> RepoConfig:
     root = root.resolve()
     data: dict = {}
     toml_path = root / ".repocodex.toml"
     if toml_path.exists():
         data = tomllib.loads(toml_path.read_text(encoding="utf-8"))
     ignore = load_ignore_file(root / ".repocodexignore")
+    exclusions = list(data.get("exclusions", DEFAULT_EXCLUSIONS))
     ceiling = data.get("distinctiveness_ceiling")
     if ceiling is None:
-        ceiling = _default_ceiling(root)
-    exclusions = list(data.get("exclusions", DEFAULT_EXCLUSIONS))
-    return RepoConfig(
+        ceiling = _default_ceiling(root, [*exclusions, *ignore])
+    config = RepoConfig(
         root=root,
         engine_version=str(data.get("engine_version", ENGINE_VERSION)),
         posture=str(data.get("posture", "shadow")),
@@ -80,3 +118,6 @@ def load_config(root: Path) -> RepoConfig:
         impact_read_cap=int(data.get("impact_read_cap", 12)),
         audit_sample_size=int(data.get("audit_sample_size", 10)),
     )
+    if enforce_pin and config.engine_version != ENGINE_VERSION:
+        raise EngineVersionMismatch(config.engine_version, ENGINE_VERSION)
+    return config

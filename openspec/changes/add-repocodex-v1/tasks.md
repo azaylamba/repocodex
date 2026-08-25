@@ -61,3 +61,13 @@
 - [x] 8.2 Determinism test: identical verdicts across two environments at the pinned engine version
 - [x] 8.3 Brownfield simulation: zero-coverage repo passes `ratchet`; covered-file edits enforce correctly
 - [x] 8.4 End-to-end: agent loop (context → edit → validate → reconcile → commit) against a sample repo
+
+## Verification notes (reconciled with tests)
+
+The boxes above record that a test existed, not that it asserted the scenario exactly. Review of the v1 suite found:
+
+- 8.1 rename REANCHOR, literal-change, and formatter-tolerance tests accepted alternative classifications (`REANCHOR|DRIFT`, `WEAK|DRIFT`, `LIVE|WEAK`). Tightened in `fix-repocodex-v1-review-gaps`.
+- 8.1 dilution warning was asserted only via `engine_version` presence. The warning content is now asserted.
+- 8.3 covered-file ratchet was cleared by any `.context/` edit; per-file correspondence is now tested.
+- Claim liveness was write-time only; `CLAIM_BROKEN` is now classified at validate time.
+

@@ -4,15 +4,21 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from repocodex.config import RepoConfig
-from repocodex.engine.match import evaluate_file, min_match_for
+from repocodex.engine.match import (
+    evaluate_file,
+    literal_as_token,
+    min_match_for,
+    read_pinned,
+)
 from repocodex.engine.relocate import relocate_anchor
-from repocodex.schema import Anchor, ConceptDocument
+from repocodex.schema import Anchor, ConceptDocument, ConceptStatus
 
 
 LIVE = "LIVE"
 WEAK = "WEAK"
 REANCHOR = "REANCHOR"
 DRIFT = "DRIFT"
+CLAIM_BROKEN = "CLAIM_BROKEN"
 
 
 @dataclass
@@ -44,13 +50,35 @@ class AnchorOutcome:
         return payload
 
 
+@dataclass
+class ClaimFinding:
+    concept: str
+    literal: str
+    classification: str = CLAIM_BROKEN
+    anchor_classification: str | None = None
+    path: str | None = None
+
+    def to_json(self) -> dict:
+        payload = {
+            "concept": self.concept,
+            "literal": self.literal,
+            "classification": self.classification,
+        }
+        if self.anchor_classification:
+            payload["anchor_classification"] = self.anchor_classification
+        if self.path:
+            payload["path"] = self.path
+        return payload
+
+
 def classify_anchor(
     doc: ConceptDocument,
     index: int,
     anchor: Anchor,
     config: RepoConfig,
     *,
-    diff_files: list[str] | None = None,
+    staged: bool = False,
+    base: str | None = None,
 ) -> AnchorOutcome:
     matched = evaluate_file(anchor, config.root, default_scope=config.scope_lines)
     required = min_match_for(anchor)
@@ -76,8 +104,9 @@ def classify_anchor(
             required=required,
         )
 
-    relocation = relocate_anchor(anchor, config, diff_files=diff_files)
+    relocation = relocate_anchor(anchor, config, staged=staged, base=base)
     if relocation.unique:
+        candidate = relocation.candidates[0]
         return AnchorOutcome(
             concept=doc.identity,
             anchor_index=index,
@@ -91,7 +120,9 @@ def classify_anchor(
                 "anchor_index": index,
                 "op": "replace_path",
                 "from": anchor.path,
-                "to": relocation.candidates[0]["path"],
+                "to": candidate["path"],
+                "terms": list(anchor.all_of),
+                "verified": {"by": "process:repocodex-reanchor"},
             },
         )
     return AnchorOutcome(
@@ -104,3 +135,52 @@ def classify_anchor(
         required=required,
         candidates=relocation.candidates,
     )
+
+
+def evaluate_claims(
+    doc: ConceptDocument,
+    config: RepoConfig,
+    *,
+    anchor_class: str | None = None,
+) -> list[ClaimFinding]:
+    if doc.status != ConceptStatus.stable or not doc.frontmatter.claims:
+        return []
+    findings: list[ClaimFinding] = []
+    for anchor in doc.anchors:
+        text = read_pinned(config.root, anchor.path)
+        if text is None:
+            for claim in doc.frontmatter.claims:
+                findings.append(
+                    ClaimFinding(
+                        concept=doc.identity,
+                        literal=claim.literal,
+                        anchor_classification=anchor_class,
+                        path=anchor.path,
+                    )
+                )
+            continue
+        matched = evaluate_file(anchor, config.root, default_scope=config.scope_lines)
+        if not matched.best:
+            region_text = None
+        else:
+            region_text = matched.best.source(text.splitlines())
+        for claim in doc.frontmatter.claims:
+            if region_text is None or not literal_as_token(claim.literal, region_text):
+                findings.append(
+                    ClaimFinding(
+                        concept=doc.identity,
+                        literal=claim.literal,
+                        anchor_classification=anchor_class,
+                        path=anchor.path,
+                    )
+                )
+    # one finding per literal
+    seen: set[str] = set()
+    unique: list[ClaimFinding] = []
+    for finding in findings:
+        key = f"{finding.concept}:{finding.literal}"
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(finding)
+    return unique

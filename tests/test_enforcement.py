@@ -21,8 +21,10 @@ def test_brownfield_uncovered_passes_ratchet(uncovered_repo: Path):
 
 
 def test_covered_file_without_memory_fails_ratchet(repo):
-    repo.payment_gateway.write_text(
-        repo.payment_gateway.read_text(encoding="utf-8") + "\nexport const extra = 1;\n",
+    repo.streamer.write_text(
+        repo.streamer.read_text(encoding="utf-8").replace(
+            "yield parsed.rows", "return parsed.rows"
+        ),
         encoding="utf-8",
     )
     payload = validate(repo.root)
@@ -32,14 +34,26 @@ def test_covered_file_without_memory_fails_ratchet(repo):
 
 def test_memory_exempt_requires_ack_and_logs(repo):
     repo.streamer.write_text("broken\n", encoding="utf-8")
-    denied = validate(repo.root, memory_exempt=True, review_ack=False)
-    assert "exempt_requires_review_ack" in denied["blocking_reasons"]
-    allowed = validate(repo.root, memory_exempt=True, review_ack=True)
+    denied = validate(repo.root, memory_exempt=True)
+    assert denied["blocking"] is True
+    assert denied.get("exemption_refused") == "missing_acknowledgment"
+    import json
+    import subprocess
+
+    ack = repo.root / ".repocodex" / "acknowledgments" / "memory-exempt.json"
+    ack.parent.mkdir(parents=True, exist_ok=True)
+    ack.write_text(
+        json.dumps({"kind": "memory-exempt", "reviewer": "agent:repocodex-review"}),
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", str(ack)], cwd=repo.root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "ack", "--no-verify"], cwd=repo.root, check=True, capture_output=True)
+    allowed = validate(repo.root, memory_exempt=True, ack_file=str(ack.relative_to(repo.root)))
     assert allowed["memory_exempt"] is True
     assert allowed["blocking"] is False
-    log = (repo.root / ".context" / "log.md").read_text(encoding="utf-8")
-    assert "memory-exempt" in log
-    assert list((repo.root / ".context" / "repair-tasks").glob("exempt-*.md"))
+    assert allowed["audit_entries"]
+    assert allowed["repair_tasks"]
+    assert "memory-exempt" not in (repo.root / ".context" / "log.md").read_text(encoding="utf-8")
 
 
 def test_contradiction_on_double_supersede(repo):

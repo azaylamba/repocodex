@@ -24,6 +24,14 @@ def _context_root(repo: Path) -> Path:
     return roots[0] if roots else repo / ".context"
 
 
+def _existing_concept_path(repo: Path, identity: str) -> Path | None:
+    for root in discover_context_roots(repo):
+        path = concept_path(root, identity)
+        if path.exists():
+            return path
+    return None
+
+
 def _why_change_rejected(existing: str | None, incoming, *, identity: str) -> str | None:
     if not existing:
         return None
@@ -60,9 +68,8 @@ def write_memory(
             except Exception:
                 ident = path.stem
     doc = parse_concept(text, ident)
-    root = _context_root(repo)
-    existing_path = concept_path(root, ident)
-    existing = existing_path.read_text(encoding="utf-8") if existing_path.exists() else None
+    existing_path = _existing_concept_path(repo, ident)
+    existing = existing_path.read_text(encoding="utf-8") if existing_path else None
     why_err = _why_change_rejected(existing, doc, identity=ident)
     if why_err:
         return envelope(
@@ -92,8 +99,14 @@ def write_memory(
         return payload
     if doc.frontmatter.status == ConceptStatus.draft and not doc.frontmatter.stale_after:
         doc.frontmatter.status = ConceptStatus.stable
-    write_concept(repo, doc, context_root=root)
+    shard = None
+    if existing_path:
+        for root in discover_context_roots(repo):
+            if concept_path(root, ident) == existing_path:
+                shard = root
+                break
+    written = write_concept(repo, doc, context_root=shard)
     regenerate_all(repo)
     payload["identity"] = ident
-    payload["path"] = str(concept_path(root, ident).relative_to(repo))
+    payload["path"] = str(written.relative_to(repo))
     return payload

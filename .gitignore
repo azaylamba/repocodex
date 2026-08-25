@@ -6,3 +6,6 @@ __pycache__/
 .venv/
 dist/
 *.egg-info/
+.repocodex/metrics.jsonl
+.tmpout/
+.tmptest/

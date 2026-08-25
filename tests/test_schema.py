@@ -17,6 +17,7 @@ status: stable
 custom_producer_key: keep-me
 claims:
   - literal: "3"
+    subject: grace_cycles
 verification:
   engine: ripgrep
   anchors:
@@ -33,6 +34,7 @@ The why.
     doc = parse_concept(text, identity="invariants/grace")
     assert doc.frontmatter.type == ConceptType.InvariantContract
     assert doc.frontmatter.claims[0].literal == "3"
+    assert doc.frontmatter.claims[0].subject == "grace_cycles"
     assert doc.frontmatter.verification.anchors[0].all_of == ["ENTERPRISE", "grace"]
     assert doc.frontmatter.supersedes == "invariants/old"
     assert doc.body.strip() == "The why."

@@ -28,6 +28,29 @@ def discover_context_roots(repo: Path) -> list[Path]:
     return roots
 
 
+def owning_context_root(repo: Path, pinned_paths: list[str]) -> Path:
+    repo = repo.resolve()
+    roots = discover_context_roots(repo)
+    root_bundle = repo / ".context"
+    if not pinned_paths:
+        return root_bundle if root_bundle.exists() else (roots[0] if roots else root_bundle)
+    matching: list[Path] = []
+    for ctx in roots:
+        if ctx.resolve() == root_bundle.resolve():
+            continue
+        owner = ctx.parent
+        try:
+            prefix = str(owner.relative_to(repo)).replace("\\", "/").rstrip("/") + "/"
+        except ValueError:
+            continue
+        if all(path.replace("\\", "/").startswith(prefix) for path in pinned_paths):
+            matching.append(ctx)
+    if not matching:
+        return root_bundle if root_bundle.exists() or not roots else roots[0]
+    matching.sort(key=lambda p: len(p.parts), reverse=True)
+    return matching[0]
+
+
 def concept_files(context_root: Path) -> list[Path]:
     files: list[Path] = []
     for path in sorted(context_root.rglob("*.md")):
@@ -113,8 +136,7 @@ def write_concept(
     context_root: Path | None = None,
     verified_by: str = "process:repocodex-rg",
 ) -> Path:
-    roots = discover_context_roots(repo)
-    root = context_root or (roots[0] if roots else repo / ".context")
+    root = context_root or owning_context_root(repo, doc.pinned_paths)
     ensure_bundle(root)
     if doc.frontmatter.status == ConceptStatus.stable and not doc.frontmatter.verified:
         doc.frontmatter.verified = stamp(verified_by)

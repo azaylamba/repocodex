@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from repocodex.commands.write import write_memory
-from repocodex.schema import envelope, parse_concept, serialize_concept
+from repocodex.schema import envelope, parse_concept, serialize_concept, stamp
 from repocodex.store.bundle import concept_path, discover_context_roots
 from repocodex.store.reverse_index import regenerate_all
 
@@ -23,6 +23,9 @@ def apply_anchor_patch(repo: Path, patch: dict) -> Path:
     idx = int(patch["anchor_index"])
     if patch.get("op") == "replace_path":
         doc.anchors[idx].path = patch["to"]
+        if patch.get("terms"):
+            doc.anchors[idx].all_of = list(patch["terms"])
+        doc.frontmatter.verified = stamp("process:repocodex-reanchor")
     path.write_text(serialize_concept(doc), encoding="utf-8")
     regenerate_all(repo)
     return path

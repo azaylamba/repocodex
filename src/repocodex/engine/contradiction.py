@@ -13,18 +13,27 @@ def overlapping_claim_conflicts(concepts: list[ConceptDocument], root) -> list[d
             shared = set(left.pinned_paths) & set(right.pinned_paths)
             if not shared:
                 continue
-            left_claims = {c.literal for c in (left.frontmatter.claims or [])}
-            right_claims = {c.literal for c in (right.frontmatter.claims or [])}
-            if left_claims and right_claims and left_claims != right_claims:
-                flags.append(
-                    {
-                        "kind": "CONTRADICTION",
-                        "left": left.identity,
-                        "right": right.identity,
-                        "reason": "conflicting_claims",
-                        "paths": sorted(shared),
-                    }
-                )
+            left_by_subject: dict[str, str] = {}
+            right_by_subject: dict[str, str] = {}
+            for claim in left.frontmatter.claims or []:
+                if claim.subject:
+                    left_by_subject[claim.subject] = claim.literal
+            for claim in right.frontmatter.claims or []:
+                if claim.subject:
+                    right_by_subject[claim.subject] = claim.literal
+            for subject, literal in left_by_subject.items():
+                other = right_by_subject.get(subject)
+                if other is not None and other != literal:
+                    flags.append(
+                        {
+                            "kind": "CONTRADICTION",
+                            "left": left.identity,
+                            "right": right.identity,
+                            "reason": "conflicting_claims",
+                            "subject": subject,
+                            "paths": sorted(shared),
+                        }
+                    )
     return flags
 
 
