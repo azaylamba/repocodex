@@ -1,0 +1,129 @@
+# agent-interfaces Specification
+
+## Purpose
+
+Expose all engine behavior through a canonical CLI with machine-readable JSON. Skills, MCP, hooks, and CI wrap that CLI. Distribution artifacts resolve inside the packaged tree, and `repocodex repair` reports only invocations it actually performed.
+
+## Requirements
+
+### Requirement: Canonical CLI
+
+The system SHALL expose all functionality through a CLI — `validate`, `write`, `reconcile`, `context`, `repair`, `install`, `bootstrap`, `audit` — with machine-readable JSON outputs that include `engine_version`. All other surfaces (skills, MCP, hooks, CI) SHALL wrap the CLI rather than reimplement it.
+
+#### Scenario: One install wires everything
+
+- **GIVEN** a repository without RepoCodex
+- **WHEN** `repocodex install` runs
+- **THEN** the pre-commit hook, GitHub Action, agent skills, and optional MCP registration are installed together
+
+#### Scenario: Bootstrap seeds only attested memory
+
+- **GIVEN** a brownfield repository
+- **WHEN** `repocodex bootstrap` mines git history, comments, and docs
+- **THEN** only gate-passing concepts are kept, marked `status: draft` with `stale_after` and mandatory `sources`
+
+### Requirement: Coding-agent skill
+
+The system SHALL ship a coding-agent skill enforcing the loop: retrieve context before editing, run the impact recipe on the diff, validate before ending the turn, apply REANCHOR patches, and repair DRIFT via `reconcile`/`write` in the same change — with anchor-authoring guidance that prefers stable tokens over renameable identifiers.
+
+#### Scenario: Turn cannot end on unrepaired drift
+
+- **GIVEN** a coding agent whose diff produced DRIFT
+- **WHEN** the agent attempts to finish its turn or commit
+- **THEN** the skill and hook require a gate-passing repair first
+
+### Requirement: Review-agent skill
+
+The system SHALL ship a review-agent skill that runs the impact recipe on every PR, verifies each new concept's prose against the originating diff, and flags unreconciled drift, skipped recipe steps, why-changes without `supersedes`/`rationale`, weakenings, contradictions, and high churn — posting all findings to the advisory check only.
+
+#### Scenario: New concept verified while diff is in context
+
+- **GIVEN** a PR that adds a new concept alongside code
+- **WHEN** the review agent runs
+- **THEN** it checks the concept's narrative against the diff and flags mismatches as advisory findings
+
+### Requirement: Optional MCP wrapper
+
+The system SHALL provide an optional MCP server exposing `get_context`, `get_impact`, `read_concept`, `write_memory`, `validate_diff`, and `reconcile_memory` as thin wrappers over the corresponding CLI commands, with identical verdicts.
+
+#### Scenario: MCP and CLI agree
+
+- **GIVEN** the same diff
+- **WHEN** validation runs via the MCP tool and via the CLI
+- **THEN** the verdicts are identical, including `engine_version`
+
+### Requirement: Portable distribution
+
+The system SHALL package skills and MCP configuration as an Agent Plugins 1.0 plugin (`plugin.json`, `skills/`, `mcp.json`), with the git pre-commit hook as the portable enforcement floor and per-client hook adapters (Claude/Cursor) as extras — because Agent Plugins 1.0 does not carry hooks.
+
+#### Scenario: Skills-only client still works
+
+- **GIVEN** an agent client that supports Agent Plugins skills but not MCP
+- **WHEN** the plugin is installed
+- **THEN** the skills load, the CLI remains fully usable, and enforcement still holds via hook and CI
+
+### Requirement: `repocodex repair` invokes a repair agent
+
+The system SHALL make `repocodex repair` invoke a repair agent against the current RECONCILE state, passing the verdict and repair prompt, and SHALL report an explicit, machine-readable failure when no agent harness is available rather than reporting success after merely writing a prompt file.
+
+#### Scenario: Repair invokes an available harness
+
+- **GIVEN** a repository in a RECONCILE state with an agent harness available
+- **WHEN** a human runs `repocodex repair`
+- **THEN** the harness is invoked with the verdict and repair prompt
+- **AND** the result reports the invocation outcome
+
+#### Scenario: No harness available fails explicitly
+
+- **GIVEN** a repository in a RECONCILE state with no agent harness available
+- **WHEN** a human runs `repocodex repair`
+- **THEN** the command reports an explicit unavailable-harness failure with the repair prompt for manual use
+- **AND** it does not report success
+
+### Requirement: Distribution artifacts resolve within the packaged tree
+
+The system SHALL ensure every installed artifact resolves the files it references from within the tree that was installed — per-client hook adapters SHALL resolve to a hook script present in the same distribution, and installation SHALL verify each artifact is resolvable before reporting it installed.
+
+#### Scenario: Hook adapter resolves to a real hook
+
+- **GIVEN** a repository where `repocodex install` has placed the plugin and its hook adapters
+- **WHEN** a per-client hook adapter is executed
+- **THEN** it resolves and runs the portable pre-commit hook from the installed tree
+
+#### Scenario: Install verifies what it reports
+
+- **GIVEN** an installation in which a referenced artifact is missing from the distribution
+- **WHEN** `repocodex install` runs
+- **THEN** it reports the failure rather than listing the artifact as installed
+
+### Requirement: Repair reports only invocations it performed
+
+`repocodex repair` SHALL report `invoked: true` only when it delivered the repair prompt to a harness and that harness ran to completion. Probing a harness — running `--help`, `--version`, or any command that does not receive the repair prompt — SHALL NOT be reported as an invocation. When a harness is present on `PATH` but the delivery fails or is not attempted, the payload SHALL report `invoked: false` with a reason, and SHALL still carry the prompt, the verdict, and the relocation candidates so a caller can drive the repair itself.
+
+#### Scenario: Prompt delivered to an available harness
+
+- **GIVEN** a repo in `RECONCILE` state and a harness on `PATH` that accepts the prompt
+- **WHEN** `repocodex repair` runs
+- **THEN** the harness receives the repair prompt
+- **AND** the payload reports `invoked: true` and names the harness
+
+#### Scenario: Probing a harness is not an invocation
+
+- **GIVEN** a repo in `RECONCILE` state and a harness on `PATH` that the engine does not deliver the prompt to
+- **WHEN** `repocodex repair` runs
+- **THEN** the payload reports `invoked: false`
+- **AND** the payload carries a reason distinguishing this from an absent harness
+
+#### Scenario: Delivery failure is reported as a failure
+
+- **GIVEN** a harness on `PATH` whose invocation exits non-zero
+- **WHEN** `repocodex repair` runs
+- **THEN** the payload reports `invoked: false` and `ok: false`
+- **AND** the payload carries the prompt, `lost`, and `candidates`
+
+#### Scenario: No harness available reports explicitly
+
+- **GIVEN** a repo in `RECONCILE` state and no recognized harness on `PATH`
+- **WHEN** `repocodex repair` runs
+- **THEN** the payload reports `error: no_agent_harness` and `ok: false`
+- **AND** the payload carries the prompt so the caller can drive the repair
