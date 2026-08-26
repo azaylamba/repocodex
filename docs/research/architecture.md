@@ -119,7 +119,7 @@ There is **no stored term database and no code index**. Terms live only in the f
 
 ### 4.3 The reverse index
 
-`.context/reverse-index.md` is a **generated, committed, deterministic** artifact mapping `source path → concept paths`, refreshed by the CLI whenever anchors change (the engine regenerates it as part of any accepted write or reanchor; CI verifies it is in sync). It exists so that "which whys pin the files I am editing" is one file read with zero inference. In sharded monorepos, each mirrored `.context/` directory carries its own reverse index and CI attests per affected package.
+`.repocodex/reverse-index.md` is a **generated, committed, deterministic** artifact mapping `source path → concept paths`, refreshed by the CLI whenever anchors change (the engine regenerates it as part of any accepted write or reanchor; CI verifies it is in sync). It lives **outside** `.context/` because it is not an OKF concept and `reverse-index.md` is not an OKF reserved name. In sharded monorepos, each mirrored `.context/` directory has a corresponding file under `.repocodex/reverse-index/` and CI attests per affected package.
 
 ### 4.4 What replaced the code graph
 
@@ -137,15 +137,16 @@ Note that the intent-side half of the old impact walk (concept → linked scenar
 
 ## 5. Memory store (OKF v0.2)
 
+`.context/` **is** an OKF v0.2 knowledge bundle: reserved names are only `index.md` and `log.md`; the root index declares `okf_version: "0.2"`; every other `.md` file is a concept with `type`. `verification.anchors` and `claims` are **producer extensions** on the same why document — not a sibling `type: Attested Computation`. `verified` records definition review against `sources`; it is **not** a gate receipt and is never stamped by a successful ripgrep attest, write, or REANCHOR.
+
 ### 5.1 Bundle layout
 
 ```
 .context/
-  index.md
-  log.md
-  reverse-index.md
+  index.md          # frontmatter: okf_version: "0.2" only
+  log.md            # ## YYYY-MM-DD headings, newest first
   workflows/
-    index.md
+    index.md        # no frontmatter; title — description links
     checkout-capture.md
   decisions/
     index.md
@@ -160,25 +161,27 @@ Note that the intent-side half of the old impact walk (concept → linked scenar
       idempotency-key.md
 ```
 
+The reverse index is written beside metrics: `.repocodex/reverse-index.md` (shards: `.repocodex/reverse-index/<escaped-context-root>.md`).
+
 Identity is the path relative to `.context/` with `.md` removed (OKF). An optional `contract_id` may exist for display; it is not identity.
 
 ### 5.2 Frontmatter contract
 
-OKF-required: `type`. OKF v0.2 families used as specified upstream: `title`, `description`, `tags`, `generated`, `verified`, `status` (`draft` | `stable` | `deprecated`), `stale_after`, `sources`.
+OKF-required: `type`. OKF v0.2 families used as specified upstream: `title`, `description`, `tags`, `generated`, `verified`, `status` (`draft` | `stable` | `deprecated`; omitted `status` means `stable`), `stale_after`, `sources` (list of objects with `resource`).
 
-`verified` values: `{ by: process:repocodex-rg, at: … }` after a passing attest; `{ by: process:repocodex-reanchor, at: … }` when anchors were relocated.
+`verified` is optional definition review (`{ by, at }` or a list of stamps). Actors are `<producer>/<version>`, `human:<id>`, or `process:<id>` — never `agent:`. A passing pin check does **not** write `verified`.
 
 RepoCodex extensions (OKF allows unknown keys; consumers must preserve them):
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `verification` | yes | Engine + anchors (§4.2) |
+| `verification` | on concepts that pin code | Engine + anchors (§4.2). Absent on unanchored knowledge pages (Playbooks, etc.). |
 | `claims` | on any concept whose prose states checkable facts | **Structured claim list**: `claims: [{ literal: "3", subject: "grace_cycles", anchor: 0 }, { literal: "ENTERPRISE" }]`. Each declared literal must appear in the **owning** anchor's terms and in that anchor's matched source — checked at write time by the gate (§6.1) **and on every validation** as `CLAIM_BROKEN` (§6.2). The optional `anchor` index names which entry in `verification.anchors` owns the literal; omit it only when the owner is unambiguous. The optional `subject` discriminator names what the literal is a value of, so contradiction detection can compare like with like (§13.3). |
 | `supersedes` | on why-change | Path of the deprecated predecessor |
 | `rationale` | on mutation | Why the why changed |
-| `format_version` | yes (bundle-level, in root `index.md`) | Migration marker for future OKF/schema revisions |
+| `okf_version` | yes (bundle-level, only key in root `index.md`) | OKF bundle version (`"0.2"`). Engine version lives in `.repocodex.toml` / CLI envelope. |
 
-`status: draft` is only for bootstrap records that have not yet attested. Production reads default to `stable`. Bootstrap-mined concepts **must** carry `sources` (§14.2).
+`status: draft` is only for bootstrap records that have not yet been promoted. Production reads default to `stable`. Bootstrap-mined concepts **must** carry `sources` with `resource` (§14.2).
 
 ### 5.3 Concept types
 
@@ -187,7 +190,7 @@ RepoCodex extensions (OKF allows unknown keys; consumers must preserve them):
 - **BusinessWorkflow** — a cross-package flow with one anchor per participating site (§13.1). Kept thin: ordering, boundaries, links to per-step pages. A claim on a workflow is owned by one of those sites, not required to hold at every site.
 - **GuardrailDecision** — the why behind a negative/global architectural rule, anchored to the **enforcement config** of the tool that enforces it (§13.3).
 
-All types require passing anchors. A concept without an anchor is not a valid concept.
+All pinning types require passing anchors at write time. Unanchored pages (unknown or narrative `type` values without `verification`) are valid OKF concepts: they load, retrieve via links, and do not enter the reverse index or arm skipped-memory.
 
 ### 5.4 Example: Invariant Contract
 
@@ -196,9 +199,11 @@ All types require passing anchors. A concept without an anchor is not a valid co
 type: InvariantContract
 title: Enterprise accounts get a 3-cycle grace period
 tags: [billing, enterprise]
-generated: { by: agent:claude-code/opus, at: 2026-08-25T12:10:00Z }
-verified: { by: process:repocodex-rg, at: 2026-08-25T12:10:01Z }
+generated: { by: claude-code/opus, at: 2026-08-25T12:10:00Z }
 status: stable
+sources:
+  - resource: git://commit/abc123
+    title: commit
 claims:
   - literal: "3"
     subject: grace_cycles
@@ -228,8 +233,7 @@ type: TechnicalDecision
 title: Custom data streamer must not become a list comprehension
 description: Generators leaked the unparsed XML tree during batch ingestion.
 tags: [ingestion, memory]
-generated: { by: agent:cursor/grok-4.6, at: 2026-08-25T12:00:00Z }
-verified: { by: process:repocodex-rg, at: 2026-08-25T12:00:01Z }
+generated: { by: cursor/grok-4.6, at: 2026-08-25T12:00:00Z }
 status: stable
 verification:
   engine: ripgrep
@@ -314,7 +318,7 @@ Teams may additionally place `// why: .context/invariants/enterprise-grace-perio
 
 Never dump `.context/` into a prompt.
 
-1. **Reverse index** (`reverse-index.md`): one read answers "which concepts pin the files I am about to edit."
+1. **Reverse index** (`.repocodex/reverse-index.md`): one read answers "which concepts pin the files I am about to edit."
 2. **`index.md` catalogs**: titles, types, tags per directory for progressive disclosure.
 3. **Bodies on demand**: the agent reads full prose only for the (typically 2–5) concepts pinned to the code in play, plus 1 link-hop of related pages as titles.
 4. **Ranking**: provenance-weighted (attested + `sources`-cited concepts before bare narrative; high-churn concepts down-ranked, inferred from git history, never stored as a score).
@@ -591,7 +595,7 @@ Until that bundle exists, the OKF-loop capability reports `unsatisfied` with rea
 | Piece | Choice |
 | --- | --- |
 | Engine + CLI | Python, Typer. Thin orchestration over `rg` and `git`. No native parser dependencies, no compiled extensions beyond ripgrep itself. |
-| Schema | Pydantic models over OKF v0.2 + extensions (`verification`, `claims`, `supersedes`, `rationale`, `format_version`). |
+| Schema | Pydantic models over OKF v0.2 + extensions (`verification`, `claims`, `supersedes`, `rationale`). Bundle version is `okf_version` in root `index.md`. |
 | Attester | ripgrep (subprocess; stable CLI contract) + `git diff -M` + `git log -S`. **Dialect portability is a write-gate condition:** anchor terms are evaluated by the liveness matcher and counted by ripgrep, so the gate rejects any regex term whose semantics differ between those paths (lookaround and similar constructs). `verification: engine: ripgrep` then means what it says for every term that exists in a bundle, and fixed-string stable tokens — already the gate's ranked preference — are unaffected. |
 | Reverse index | Generated markdown, committed, engine-verified. |
 | Skills | Coding-agent skill + review-agent skill (context recipe, impact recipe, anchor authoring guidance, reconcile handling). |
@@ -608,7 +612,7 @@ Language coverage is **anything grep-able**: all programming languages, SQL, YAM
 
 All of the following ship in V1. Rollout postures (§12.2) are configuration, not future versions.
 
-- `.context/` OKF v0.2 bundle: `index.md`, `log.md`, committed reverse index, sharding convention
+- `.context/` OKF v0.2 bundle: `index.md`, `log.md`, reverse index outside the bundle, sharding convention
 - Concept types: TechnicalDecision, InvariantContract, BusinessWorkflow (multi-anchor), GuardrailDecision
 - Textual anchor format: `all_of`, regex terms, `near`/`scope_lines`, `min_match`, multi-anchor
 - Write gate: match, in-file uniqueness, distinctiveness ceilings with reported counts, structured `claims` check, exclusion enforcement
@@ -642,7 +646,7 @@ Explicitly **not in this design** (removed, not postponed): persisted code graph
 | Token cost per turn | Bounded recipes, deterministic intent-side impact, shadow-posture measurement (§16) |
 | Memory explosion | One why per concept, `stale_after`, GC-to-deprecated, scoped retrieval (§14.3) |
 | Merge races on anchors | Single-writer patching, post-merge re-attest, CONTRADICTION on double supersede (§15) |
-| Ecosystem churn (OKF, Agent Plugins are 2026 specs) | Pydantic isolation layer, `format_version` in bundle, pinned plugin schema versions |
+| Ecosystem churn (OKF, Agent Plugins are 2026 specs) | Pydantic isolation layer, `okf_version` in the bundle, pinned plugin schema versions |
 | Vendored/generated code polluting scans | `.gitignore` + `.repocodexignore` respected in all scan paths; pins inside excluded paths rejected |
 
 ---

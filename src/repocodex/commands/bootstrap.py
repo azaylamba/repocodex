@@ -13,6 +13,7 @@ from repocodex.schema import (
     ConceptFrontmatter,
     ConceptStatus,
     ConceptType,
+    Source,
     Verification,
     envelope,
 )
@@ -113,7 +114,7 @@ def bootstrap(repo: Path) -> dict:
                 title=note[:80],
                 status=ConceptStatus.draft,
                 stale_after=_stale_after(),
-                sources=[f"commit:{source}"],
+                sources=[Source(resource=f"git://commit/{source}", title="commit", id=source)],
                 verification=Verification(
                     engine="ripgrep",
                     anchors=[Anchor(path=rel, all_of=terms)],

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from repocodex.engine.impact import linked_identities
-from repocodex.schema import ConceptDocument, ConceptStatus
+from repocodex.schema import ConceptDocument, ConceptStatus, type_str
 from repocodex.store.bundle import discover_context_roots, load_concepts
 from repocodex.store.reverse_index import merged_index
 from repocodex.tools.git import run_git
@@ -105,7 +105,7 @@ def retrieve(
                 {
                     "identity": linked,
                     "title": other.frontmatter.title if other else linked,
-                    "type": other.frontmatter.type.value if other else None,
+                    "type": type_str(other.frontmatter.type) if other else None,
                 }
             )
         for sibling in _catalog_siblings(root, doc, selected_ids):
@@ -115,17 +115,22 @@ def retrieve(
             other = by_id.get(sibling["identity"])
             if other:
                 sibling["title"] = other.frontmatter.title or sibling["title"]
-                sibling["type"] = other.frontmatter.type.value
+                sibling["type"] = type_str(other.frontmatter.type)
             related.append(sibling)
     payload_concepts = []
     for doc in selected:
         item = {
             "identity": doc.identity,
             "title": doc.frontmatter.title,
-            "type": doc.frontmatter.type.value,
+            "type": type_str(doc.frontmatter.type),
             "status": doc.status.value,
             "tags": doc.frontmatter.tags,
-            "sources": doc.frontmatter.sources,
+            "sources": [
+                item.model_dump(mode="python", exclude_none=True) if hasattr(item, "model_dump") else item
+                for item in (doc.frontmatter.sources or [])
+            ]
+            if doc.frontmatter.sources
+            else None,
         }
         if include_bodies:
             item["body"] = doc.body

@@ -16,11 +16,12 @@ def test_monorepo_shards_have_local_indexes(tmp_path):
         GRACE_CONCEPT.replace("invariants/enterprise-grace-period", "invariants/local"),
         encoding="utf-8",
     )
-    (shard.parent / "index.md").write_text("---\nformat_version: '1.0'\n---\n\n# shard\n", encoding="utf-8")
+    (shard.parent / "index.md").write_text("---\nokf_version: '0.2'\n---\n\n# shard\n", encoding="utf-8")
     init_git_repo(root)
     regenerate_all(root)
     roots = discover_context_roots(root)
     assert len(roots) >= 2
-    assert (root / "packages" / "billing" / ".context" / "reverse-index.md").exists()
+    assert not (root / "packages" / "billing" / ".context" / "reverse-index.md").exists()
+    assert (root / ".repocodex" / "reverse-index" / "packages-billing.md").exists()
     payload = validate(root, all_concepts=True)
     assert payload["engine_version"]

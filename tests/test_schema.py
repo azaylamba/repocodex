@@ -63,10 +63,10 @@ Body
     assert again.frontmatter.model_extra["vendor_field"] == {"nested": True}
 
 
-def test_format_version_is_bundle_level_field():
+def test_okf_version_is_bundle_level_field():
     text = """\
 ---
-format_version: "1.0"
+okf_version: "0.2"
 ---
 
 # catalog
@@ -74,4 +74,4 @@ format_version: "1.0"
     from repocodex.schema import parse_index
 
     index = parse_index(text)
-    assert index.format_version == "1.0"
+    assert index.okf_version == "0.2"

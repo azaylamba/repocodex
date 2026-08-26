@@ -376,7 +376,14 @@ def test_bootstrap_cites_per_concept_source(repo):
     payload = bootstrap(repo.root)
     docs = [d for d in load_concepts(repo.root) if d.identity.startswith("bootstrap/")]
     if payload["kept"]:
-        assert all(d.frontmatter.sources and all(s.startswith("commit:") for s in d.frontmatter.sources) for d in docs)
+        assert all(
+            d.frontmatter.sources
+            and all(
+                (s.resource if hasattr(s, "resource") else s["resource"]).startswith("git://commit/")
+                for s in d.frontmatter.sources
+            )
+            for d in docs
+        )
 
 
 def test_bootstrap_rejects_unsourced(repo):
@@ -435,7 +442,7 @@ def test_write_lands_in_owning_shard(tmp_path: Path):
     write_architecture_fixtures(root)
     shard = root / "packages" / "billing" / ".context"
     shard.mkdir(parents=True)
-    (shard / "index.md").write_text("---\nformat_version: '1.0'\n---\n\n# shard\n", encoding="utf-8")
+    (shard / "index.md").write_text("---\nokf_version: '0.2'\n---\n\n# shard\n", encoding="utf-8")
     init_git_repo(root)
     billing_src = root / "packages" / "billing" / "src" / "gw.ts"
     billing_src.parent.mkdir(parents=True)

@@ -27,7 +27,8 @@ def test_validate_reanchor_on_rename(repo):
     assert streamer_outcomes
     assert streamer_outcomes[0]["classification"] == "REANCHOR"
     assert streamer_outcomes[0]["patch"]["to"].endswith("streamer_v2.py")
-    assert streamer_outcomes[0]["patch"]["verified"]["by"] == "process:repocodex-reanchor"
+    assert "verified" not in streamer_outcomes[0]["patch"]
+    assert streamer_outcomes[0]["patch"]["actor"] == "process:repocodex-reanchor"
     assert streamer_outcomes[0]["patch"]["terms"]
 
 

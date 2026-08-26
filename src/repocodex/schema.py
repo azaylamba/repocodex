@@ -5,11 +5,13 @@ from enum import Enum
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from repocodex import ENGINE_VERSION
 
 FRONTMATTER_DELIM = "---"
+OKF_VERSION = "0.2"
+PROCESS_RG = "process:repocodex-rg"
 
 
 class ConceptType(str, Enum):
@@ -47,28 +49,128 @@ class Verification(BaseModel):
     anchors: list[Anchor] = Field(default_factory=list)
 
 
+class Source(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: str
+    id: str | None = None
+    title: str | None = None
+    author: str | None = None
+    usage_count: int | None = None
+    last_modified: str | None = None
+
+
 class ActorStamp(BaseModel):
     model_config = ConfigDict(extra="allow")
     by: str
-    at: str
+    at: str | None = None
+
+    @field_validator("by", mode="before")
+    @classmethod
+    def _normalize_actor(cls, value: Any) -> str:
+        return normalize_actor(str(value))
+
+    @field_validator("at", mode="before")
+    @classmethod
+    def _at_as_str(cls, value: Any) -> str | None:
+        if value is None:
+            return None
+        if hasattr(value, "isoformat"):
+            iso = value.isoformat()
+            if iso.endswith("+00:00"):
+                return iso[:-6] + "Z"
+            return iso
+        return str(value)
+
+
+def normalize_actor(value: str) -> str:
+    if value.startswith("agent:"):
+        return value[len("agent:") :]
+    return value
+
+
+def source_from_string(value: str) -> Source:
+    if value.startswith("commit:"):
+        sha = value[len("commit:") :]
+        return Source(resource=f"git://commit/{sha}", title="commit", id=sha)
+    return Source(resource=value)
+
+
+def coerce_source(item: Any) -> Source:
+    if isinstance(item, Source):
+        return item
+    if isinstance(item, str):
+        return source_from_string(item)
+    if isinstance(item, dict):
+        return Source.model_validate(item)
+    raise ValueError("sources entries must be objects with resource")
+
+
+def coerce_sources(value: Any) -> list[Source] | None:
+    if value is None:
+        return None
+    if not isinstance(value, list):
+        raise ValueError("sources must be a list")
+    return [coerce_source(item) for item in value]
+
+
+def coerce_verified(value: Any) -> ActorStamp | list[ActorStamp] | None:
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return [ActorStamp.model_validate(item) for item in value]
+    if isinstance(value, ActorStamp):
+        return value
+    return ActorStamp.model_validate(value)
+
+
+def type_str(value: Any) -> str:
+    if hasattr(value, "value") and not isinstance(value, str):
+        return str(value.value)
+    return str(value)
 
 
 class ConceptFrontmatter(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: ConceptType
+    type: str
     title: str | None = None
     description: str | None = None
     tags: list[str] = Field(default_factory=list)
     generated: ActorStamp | dict[str, Any] | None = None
-    verified: ActorStamp | dict[str, Any] | None = None
-    status: ConceptStatus = ConceptStatus.draft
+    verified: ActorStamp | list[ActorStamp] | dict[str, Any] | None = None
+    status: ConceptStatus = ConceptStatus.stable
     stale_after: str | None = None
-    sources: list[str] | None = None
-    verification: Verification
+    sources: list[Source] | None = None
+    verification: Verification | None = None
     claims: list[Claim] | None = None
     supersedes: str | None = None
     rationale: str | None = None
     contract_id: str | None = None
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def _type_as_str(cls, value: Any) -> str:
+        if value is None or value == "":
+            raise ValueError("type is required")
+        return type_str(value)
+
+    @field_validator("generated", mode="before")
+    @classmethod
+    def _generated(cls, value: Any) -> ActorStamp | None:
+        if value is None:
+            return None
+        if isinstance(value, ActorStamp):
+            return value
+        return ActorStamp.model_validate(value)
+
+    @field_validator("verified", mode="before")
+    @classmethod
+    def _verified(cls, value: Any) -> ActorStamp | list[ActorStamp] | None:
+        return coerce_verified(value)
+
+    @field_validator("sources", mode="before")
+    @classmethod
+    def _sources(cls, value: Any) -> list[Source] | None:
+        return coerce_sources(value)
 
     def extra_keys(self) -> dict[str, Any]:
         return dict(self.model_extra or {})
@@ -85,6 +187,8 @@ class ConceptDocument(BaseModel):
 
     @property
     def anchors(self) -> list[Anchor]:
+        if not self.frontmatter.verification:
+            return []
         return self.frontmatter.verification.anchors
 
     @property
@@ -94,7 +198,7 @@ class ConceptDocument(BaseModel):
 
 class IndexDocument(BaseModel):
     model_config = ConfigDict(extra="allow")
-    format_version: str | None = None
+    okf_version: str | None = None
     body: str = ""
     extras: dict[str, Any] = Field(default_factory=dict)
 
@@ -103,8 +207,8 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def stamp(by: str = "process:repocodex-rg") -> dict[str, str]:
-    return {"by": by, "at": utc_now()}
+def stamp(by: str = PROCESS_RG) -> dict[str, str]:
+    return {"by": normalize_actor(by), "at": utc_now()}
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
@@ -136,9 +240,10 @@ def parse_concept(text: str, identity: str) -> ConceptDocument:
 
 def parse_index(text: str) -> IndexDocument:
     data, body = split_frontmatter(text)
-    extras = {k: v for k, v in data.items() if k != "format_version"}
+    extras = {k: v for k, v in data.items() if k not in {"okf_version", "format_version"}}
+    version = data.get("okf_version")
     return IndexDocument(
-        format_version=str(data["format_version"]) if "format_version" in data else None,
+        okf_version=str(version) if version is not None else None,
         body=body,
         extras=extras,
     )
@@ -154,14 +259,42 @@ def _dump_yaml(data: dict[str, Any]) -> str:
     return dumped.rstrip() + "\n"
 
 
+def _dump_source(source: Any) -> dict[str, Any]:
+    item = coerce_source(source)
+    return item.model_dump(mode="python", exclude_none=True)
+
+
+def _dump_stamp(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return [_dump_stamp(item) for item in value]
+    if isinstance(value, ActorStamp):
+        data = value.model_dump(mode="python", exclude_none=True)
+        if "by" in data:
+            data["by"] = normalize_actor(str(data["by"]))
+        return data
+    if isinstance(value, dict):
+        data = dict(value)
+        if "by" in data:
+            data["by"] = normalize_actor(str(data["by"]))
+        return data
+    return value
+
+
 def _frontmatter_dict(frontmatter: ConceptFrontmatter) -> dict[str, Any]:
     data = frontmatter.model_dump(mode="python", exclude_none=True)
     for key, value in (frontmatter.model_extra or {}).items():
         data[key] = value
-    if "type" in data and hasattr(data["type"], "value"):
-        data["type"] = data["type"].value
+    data["type"] = type_str(data.get("type", frontmatter.type))
     if "status" in data and hasattr(data["status"], "value"):
         data["status"] = data["status"].value
+    if data.get("sources") is not None:
+        data["sources"] = [_dump_source(item) for item in data["sources"]]
+    if "generated" in data:
+        data["generated"] = _dump_stamp(data["generated"])
+    if "verified" in data:
+        data["verified"] = _dump_stamp(data["verified"])
     return data
 
 
@@ -173,8 +306,8 @@ def serialize_concept(doc: ConceptDocument) -> str:
 
 def serialize_index(index: IndexDocument) -> str:
     data: dict[str, Any] = {}
-    if index.format_version is not None:
-        data["format_version"] = index.format_version
+    if index.okf_version is not None:
+        data["okf_version"] = index.okf_version
     data.update(index.extras)
     if not data:
         return index.body

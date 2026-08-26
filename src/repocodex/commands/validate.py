@@ -160,7 +160,7 @@ def validate(
 
     impacted = intent_impact(files, concepts, index)
     contradictions = contradiction_flags(concepts, root)
-    sync_errors = index_sync_errors(root)
+    sync_errors = index_sync_errors(root, staged=staged)
     ratchet = skipped_memory(
         files,
         concepts,

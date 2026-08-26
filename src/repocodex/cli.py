@@ -56,7 +56,7 @@ def validate_command(
         lambda: run_validate(
             _repo(),
             base=base,
-            staged=staged,
+            staged=staged or hook,
             all_concepts=all_concepts or not diff,
             memory_exempt=memory_exempt,
             review_ack=review_ack,

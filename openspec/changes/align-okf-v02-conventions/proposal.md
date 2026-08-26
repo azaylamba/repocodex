@@ -16,8 +16,11 @@ Align the bundle with the spec so the why remains portable knowledge. Do not rep
 - **`verified` is not a gate receipt.** A successful ripgrep attest does not overwrite `verified`. Attestation remains a runtime verdict (LIVE / CLAIM_BROKEN / …), not stored in the concept. `verified` is written only when a reviewer or process confirms the *definition* (the why) against its sources.
 - **Parser is an OKF consumer.** Unknown `type` values are tolerated as generic concepts. Concepts without `verification.anchors` remain in the bundle and in retrieval. The write gate and the required pin check still apply only to concepts that pin code — that is RepoCodex policy, not an OKF requirement.
 - **Anchors stay a producer extension.** `verification.anchors` and `claims` remain extra keys on the same why document. We do **not** split every invariant into a narrative concept plus `type: Attested Computation`. Splitting would add a file the agent must maintain per why and would fight “one concept per why.” Optional `resource` on a pinning concept MAY name the primary pinned path as a URI; it does not replace anchors.
+- **Upgrade leaves a conformant bundle.** Regenerating the reverse index deletes leftover `.context/**/reverse-index.md`. If one remains, the required check reports it as existing `index_sync` — not a new blocking reason, and not as an OKF reserved name. Staged/hook validate compares the git-index copy of the new reverse-index path so an unstaged generated file cannot local-pass then CI-fail.
+- **The coding skill names the new commit path.** After write or reanchor, agents stage `.repocodex/reverse-index.md` (and shard files under `.repocodex/reverse-index/`), not only `.context/`.
+- **Catalog and log claims are testable as specified.** Nested-index description comes from frontmatter `description`, not body prose already in the fixture catalog. `log.md` newest-first is proven across two dates.
 
-Explicitly **not** in this change: the agent-read scenario loop, CLAIM_BROKEN, owned claims, the scoped ratchet, the closed blocking set, or making pytest the scenario check. Those stay as specified in `fix-repocodex-v2-review-gaps`.
+Explicitly **not** in this change: the agent-read scenario loop, CLAIM_BROKEN, owned claims, the scoped ratchet, adding a member to the closed blocking set, or making pytest the scenario check. Those stay as specified in `fix-repocodex-v2-review-gaps`. Rewriting customer `format_version` keys until the next index write remains a migration non-requirement.
 
 ## Capabilities
 
@@ -27,13 +30,15 @@ Explicitly **not** in this change: the agent-read scenario loop, CLAIM_BROKEN, o
 
 ### Modified Capabilities
 
-- `memory-store`: sources objects, actor strings, status default, reverse-index location, catalog/log conventions, unknown types preserved.
-- `anchor-verification`: distinguish stored `verified` (definition) from runtime attest (pin check); do not stamp `verified` on gate pass.
+- `memory-store`: sources objects, actor strings, status default, reverse-index location, catalog/log conventions, unknown types preserved; leftover in-bundle reverse-index is removed on regenerate.
+- `anchor-verification`: distinguish stored `verified` (definition) from runtime attest (pin check); do not stamp `verified` on gate pass; sample concepts do not teach `process:repocodex-rg` as a verified receipt.
 - `context-retrieval`: serve any concept in the bundle, including those without anchors; skip only reserved files.
+- `enforcement`: leftover `.context/reverse-index.md` and an unstaged generated reverse index are `index_sync`; no new blocking reason.
+- `agent-interfaces`: coding skill (and plugin copy) instruct committing the reverse index outside `.context/`.
 
 ## Impact
 
-- **Affected code:** `schema.py`, `store/bundle.py`, `store/reverse_index.py`, `commands/write.py`, `commands/bootstrap.py`, `commands/validate.py`, `retrieval.py`, fixtures, architecture §5.
+- **Affected code:** `schema.py`, `store/bundle.py`, `store/reverse_index.py`, `commands/write.py`, `commands/bootstrap.py`, `commands/validate.py`, `retrieval.py`, fixtures, architecture §5, coding skills, index-sync against the git index when `--staged`/`--hook`.
 - **Existing bundles:** one-time rewrite of root index key and reverse-index path; `sources: ["commit:…"]` becomes `{ resource: … }`; `agent:` actors become `producer/version`. Concepts keep their identities and anchors.
 - **Product behavior:** agents still retrieve why and read code. The required check still blocks on detached pins, not on missing `verified`. Unanchored OKF pages can live in `.context/` for narrative; they do not arm the ratchet until they pin files.
 - **Dependencies:** none. Still git + ripgrep + Python. No OKF runtime or attester ABI (OKF defers that).

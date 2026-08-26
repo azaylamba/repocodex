@@ -63,3 +63,21 @@ The schema SHALL NOT enumerate OKF types as a closed set that rejects the docume
 - **GIVEN** a concept with an unknown frontmatter key `owner: billing`
 - **WHEN** it is parsed and serialized
 - **THEN** `owner: billing` is still present
+
+### Requirement: Reverse index lives beside metrics, not in the bundle
+
+The generated path→concept map SHALL be written at `.repocodex/reverse-index.md` for the repo-root bundle and at `.repocodex/reverse-index/<escaped-context-parent>.md` for each shard. It SHALL NOT be written under `.context/`. Regeneration SHALL remove any leftover `.context/**/reverse-index.md`. Unanchored concepts SHALL NOT appear in the map.
+
+#### Scenario: Root reverse index is outside .context
+
+- **GIVEN** an accepted write that pins a source file in the repo-root bundle
+- **WHEN** the reverse index is regenerated
+- **THEN** `.repocodex/reverse-index.md` contains that path→concept mapping
+- **AND** `.context/reverse-index.md` does not exist
+
+#### Scenario: Shard reverse index is one file per context root
+
+- **GIVEN** a mirrored `.context/` under `packages/billing/`
+- **WHEN** the reverse index is regenerated
+- **THEN** the mapping is at `.repocodex/reverse-index/packages-billing.md`
+- **AND** `packages/billing/.context/reverse-index.md` does not exist

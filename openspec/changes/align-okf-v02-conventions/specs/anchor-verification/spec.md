@@ -25,6 +25,13 @@ OKF `verified` records who confirmed the concept's *definition* against its sour
 - **THEN** the concept's `path` is updated
 - **AND** `verified` is not set to `process:repocodex-reanchor` unless a separate definition review occurred
 
+#### Scenario: Sample concepts do not teach a pin-check as verified
+
+- **GIVEN** the engine-package sample concepts used by the test suite
+- **WHEN** their frontmatter is read
+- **THEN** `verified.by` is not `process:repocodex-rg`
+- **AND** if `verified` is present it names a definition reviewer (`human:` or `<producer>/<version>`)
+
 ### Requirement: Anchors remain extra keys on the why document
 
 A concept that pins code SHALL keep `verification.anchors` (and `claims` when used) on that same file. The engine SHALL NOT require a sibling `type: Attested Computation` concept in order to attest. Optional `resource` MAY duplicate the primary pinned path as a URI for OKF consumers; retrieval and the pin check still use anchors.
@@ -42,3 +49,4 @@ A concept that pins code SHALL keep `verification.anchors` (and `claims` when us
 - **WHEN** the pin check runs
 - **THEN** liveness is decided from `verification.anchors`
 - **AND** `resource` alone is not treated as an anchor
+

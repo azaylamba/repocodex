@@ -111,7 +111,7 @@ def test_architecture_examples_pass_gate(repo):
     docs = {
         path.name: parse_concept(path.read_text(encoding="utf-8"), "x")
         for path in (repo.root / ".context").rglob("*.md")
-        if path.name not in {"index.md", "log.md", "reverse-index.md"}
+        if path.name not in {"index.md", "log.md"}
     }
     cfg = load_config(repo.root)
     grace = parse_concept(

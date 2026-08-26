@@ -123,7 +123,7 @@ def classify_anchor(
                 "from": anchor.path,
                 "to": candidate["path"],
                 "terms": list(anchor.all_of),
-                "verified": {"by": "process:repocodex-reanchor"},
+                "actor": "process:repocodex-reanchor",
             },
         )
     return AnchorOutcome(

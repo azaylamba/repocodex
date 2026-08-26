@@ -53,3 +53,10 @@ def git_ls_files(cwd: Path) -> list[str]:
 def git_is_tracked(path: str, cwd: Path) -> bool:
     result = run_git(["ls-files", "--error-unmatch", "--", path], cwd=cwd)
     return result.returncode == 0
+
+
+def git_show_index(path: str, cwd: Path) -> str | None:
+    result = run_git(["show", f":{path}", "--"], cwd=cwd)
+    if result.returncode != 0:
+        return None
+    return result.stdout

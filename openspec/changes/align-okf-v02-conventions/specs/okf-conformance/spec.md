@@ -26,7 +26,7 @@ The directory that holds RepoCodex memory SHALL satisfy OKF v0.2 conformance: ev
 
 ### Requirement: Runtime artifacts do not occupy reserved or concept paths
 
-Generated indexes that are not OKF concepts SHALL NOT live in the bundle under a reserved name OKF does not define. The reverse index SHALL be written outside `.context/`. `index.md` and `log.md` keep their OKF meanings.
+Generated indexes that are not OKF concepts SHALL NOT live in the bundle under a reserved name OKF does not define. The reverse index SHALL be written outside `.context/`. `index.md` and `log.md` keep their OKF meanings. Regenerating the reverse index SHALL delete leftover `.context/**/reverse-index.md`. A leftover file is an illegal extra file, not an OKF reserved name.
 
 #### Scenario: Reverse index is outside the bundle
 
@@ -34,6 +34,20 @@ Generated indexes that are not OKF concepts SHALL NOT live in the bundle under a
 - **WHEN** the reverse index is regenerated
 - **THEN** no `reverse-index.md` exists under `.context/`
 - **AND** the mapping is still readable by validate and context retrieval
+
+#### Scenario: Leftover in-bundle reverse index is removed
+
+- **GIVEN** a bundle that still contains `.context/reverse-index.md`
+- **WHEN** the reverse index is regenerated
+- **THEN** that file no longer exists under `.context/`
+- **AND** `.repocodex/reverse-index.md` (or the shard file) holds the mapping
+
+#### Scenario: Leftover is not reported as a reserved name
+
+- **GIVEN** a bundle that still contains `.context/reverse-index.md`
+- **WHEN** bundle conformance or index-sync is reported
+- **THEN** the finding does not name `reverse-index.md` as an OKF reserved filename
+- **AND** reserved names remain only `index.md` and `log.md`
 
 #### Scenario: Root index declares okf_version
 
@@ -49,6 +63,14 @@ Generated indexes that are not OKF concepts SHALL NOT live in the bundle under a
 - **THEN** the file has no YAML frontmatter
 - **AND** the body lists the concept as a markdown link with title and description when present
 
+#### Scenario: Catalog description comes from frontmatter
+
+- **GIVEN** a concept whose frontmatter `description` is a unique string that does not already appear in the nested catalog
+- **AND** whose body contains different prose
+- **WHEN** the nested `index.md` is generated
+- **THEN** the new catalog link includes that `description`
+- **AND** the catalog does not use the body prose as the description
+
 ### Requirement: Log files follow OKF date grouping
 
 `log.md` SHALL group entries under ISO 8601 `YYYY-MM-DD` headings, newest day first. Entries MAY keep a bold lead word. Engine writes SHALL append to today's heading rather than a flat timestamp list.
@@ -59,3 +81,10 @@ Generated indexes that are not OKF concepts SHALL NOT live in the bundle under a
 - **WHEN** the bundle `log.md` is read
 - **THEN** the newest heading is `## YYYY-MM-DD` for the write's UTC date
 - **AND** an entry names the concept identity
+
+#### Scenario: Newer day sorts above older day
+
+- **GIVEN** a `log.md` that already contains a `## 2020-01-01` heading with an entry
+- **WHEN** a concept is written on a later UTC date
+- **THEN** the later `## YYYY-MM-DD` heading appears before `## 2020-01-01`
+- **AND** today's entry is under the later heading

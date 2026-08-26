@@ -17,7 +17,7 @@ def test_bundle_loads_one_concept_per_file(repo):
     workflow = next(d for d in docs if d.identity == "workflows/checkout-capture")
     assert len(workflow.anchors) == 3
     guard = next(d for d in docs if d.identity == "decisions/layering-no-domain-to-infra")
-    assert guard.frontmatter.type.value == "GuardrailDecision"
+    assert guard.frontmatter.type == "GuardrailDecision"
 
 
 def test_write_updates_catalog_log_and_reverse_index(repo):
@@ -37,7 +37,11 @@ def test_write_updates_catalog_log_and_reverse_index(repo):
 
 
 def test_index_sync_detects_drift(repo):
-    (repo.root / ".context" / "reverse-index.md").write_text("# reverse-index\n", encoding="utf-8")
+    from repocodex.store.reverse_index import reverse_index_path
+
+    path = reverse_index_path(repo.root, repo.root / ".context")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("# reverse-index\n", encoding="utf-8")
     errors = index_sync_errors(repo.root)
     assert errors
 

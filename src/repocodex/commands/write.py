@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from repocodex.config import load_config
-from repocodex.engine.gate import evaluate_write
+from repocodex.engine.gate import GateResult, evaluate_write
 from repocodex.schema import (
     ConceptStatus,
     envelope,
@@ -93,7 +93,10 @@ def write_memory(
             )
         deprecate_concept(repo, doc.frontmatter.supersedes, reason=f"superseded by {ident}")
 
-    gate = evaluate_write(doc, config)
+    if doc.anchors:
+        gate = evaluate_write(doc, config)
+    else:
+        gate = GateResult(accepted=True)
     payload = envelope(gate.to_json())
     if not gate.accepted:
         return payload

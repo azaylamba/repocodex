@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from repocodex.engine.code_impact import rank_code_hits
 from repocodex.retrieval import retrieve
-from repocodex.schema import ConceptStatus, parse_concept, serialize_concept
+from repocodex.schema import ConceptStatus, Source, parse_concept, serialize_concept
 
 
 def test_drafts_excluded_from_default_retrieval(repo):
@@ -10,7 +10,7 @@ def test_drafts_excluded_from_default_retrieval(repo):
     text = (repo.root / ".context" / "invariants" / "enterprise-grace-period.md").read_text(encoding="utf-8")
     doc = parse_concept(text, "invariants/draft-item")
     doc.frontmatter.status = ConceptStatus.draft
-    doc.frontmatter.sources = ["commit:abc"]
+    doc.frontmatter.sources = [Source(resource="git://commit/abc", title="commit")]
     path.write_text(serialize_concept(doc), encoding="utf-8")
     from repocodex.store.reverse_index import regenerate_all
 
@@ -27,7 +27,7 @@ def test_provenance_ranks_above_bare(repo):
         (repo.root / ".context" / "invariants" / "enterprise-grace-period.md").read_text(encoding="utf-8"),
         "invariants/enterprise-grace-period",
     )
-    sourced.frontmatter.sources = ["PR-1"]
+    sourced.frontmatter.sources = [Source(resource="PR-1")]
     (repo.root / ".context" / "invariants" / "enterprise-grace-period.md").write_text(
         serialize_concept(sourced), encoding="utf-8"
     )

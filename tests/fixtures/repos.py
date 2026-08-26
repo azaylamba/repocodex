@@ -29,8 +29,7 @@ GRACE_CONCEPT = '''\
 type: InvariantContract
 title: Enterprise accounts get a 3-cycle grace period
 tags: [billing, enterprise]
-generated: { by: agent:claude-code/opus, at: 2026-08-25T12:10:00Z }
-verified: { by: process:repocodex-rg, at: 2026-08-25T12:10:01Z }
+generated: { by: claude-code/opus, at: 2026-08-25T12:10:00Z }
 status: stable
 claims:
   - literal: "3"
@@ -57,8 +56,7 @@ type: TechnicalDecision
 title: Custom data streamer must not become a list comprehension
 description: Generators leaked the unparsed XML tree during batch ingestion.
 tags: [ingestion, memory]
-generated: { by: agent:cursor/grok-4.6, at: 2026-08-25T12:00:00Z }
-verified: { by: process:repocodex-rg, at: 2026-08-25T12:00:01Z }
+generated: { by: cursor/grok-4.6, at: 2026-08-25T12:00:00Z }
 status: stable
 verification:
   engine: ripgrep
@@ -79,8 +77,7 @@ WORKFLOW_CONCEPT = '''\
 type: BusinessWorkflow
 title: Checkout capture spans billing ledger and notify
 tags: [checkout]
-generated: { by: agent:test, at: 2026-08-25T12:00:00Z }
-verified: { by: process:repocodex-rg, at: 2026-08-25T12:00:01Z }
+generated: { by: process:repocodex-test, at: 2026-08-25T12:00:00Z }
 status: stable
 verification:
   engine: ripgrep
@@ -102,8 +99,7 @@ CLAIMED_WORKFLOW_CONCEPT = '''\
 type: BusinessWorkflow
 title: Checkout capture spans billing ledger and notify
 tags: [checkout]
-generated: { by: agent:test, at: 2026-08-25T12:00:00Z }
-verified: { by: process:repocodex-rg, at: 2026-08-25T12:00:01Z }
+generated: { by: process:repocodex-test, at: 2026-08-25T12:00:00Z }
 status: stable
 claims:
   - literal: "CHECKOUT_HOLD"
@@ -134,8 +130,7 @@ GUARDRAIL_CONCEPT = '''\
 type: GuardrailDecision
 title: Domain must not import infrastructure
 tags: [architecture]
-generated: { by: agent:test, at: 2026-08-25T12:00:00Z }
-verified: { by: process:repocodex-rg, at: 2026-08-25T12:00:01Z }
+generated: { by: process:repocodex-test, at: 2026-08-25T12:00:00Z }
 status: stable
 verification:
   engine: ripgrep
@@ -149,7 +144,7 @@ Keep domain independent of infrastructure adapters.
 
 ROOT_INDEX = '''\
 ---
-format_version: "1.0"
+okf_version: "0.2"
 ---
 
 # Context catalog

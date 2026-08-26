@@ -33,9 +33,15 @@ OKF allows unknown keys. `verification` and `claims` remain producer extensions 
 
 ### Reverse index leaves the bundle
 
-OKF reserves only `index.md` and `log.md`. A generated `reverse-index.md` inside `.context/` is either an illegal concept (no `type`) or a fake reserved name. Write it beside metrics, e.g. `.repocodex/reverse-index.md` (per shard: `.repocodex/reverse-index/<escaped-context-root>.md` or one file per `.context` sibling path). Validate and context keep using it. CI sync check follows the new path.
+OKF reserves only `index.md` and `log.md`. A generated `reverse-index.md` inside `.context/` is an illegal extra file, not a reserved name. Write it beside metrics: `.repocodex/reverse-index.md`; per shard, one file under `.repocodex/reverse-index/<escaped-context-parent>.md` (slash → hyphen). Validate and context keep using it. CI sync check follows the new path.
+
+Regenerate **deletes** leftover `.context/**/reverse-index.md`. If one remains, report it as existing `index_sync` — do not add a blocking reason. The error names an illegal extra file (or equivalent), not `reserved_name`.
+
+`--staged` / `--hook` index-sync reads the git-index copy of the new path (missing if unstaged). Working-tree-only comparison local-passes an unstaged generated file and fails in CI.
 
 *Alternative considered:* make reverse-index a concept `type: ReverseIndex`. Rejected: it is a derived artifact, not knowledge; agents should not retrieve it as why.
+
+*Alternative considered:* a new required-check reason for OKF layout. Rejected: the blocking set is closed; leftover path is reverse-index desync.
 
 ### `verified` is never a gate side effect
 
@@ -45,7 +51,7 @@ Write and reanchor stop assigning `verified`. Validate remains read-only. If we 
 
 Load every `.md` with a `type` except reserved names. Unknown types are strings, not enum failures. Concepts without anchors are first-class for retrieval and links. `repocodex write` of a concept that *declares* anchors still must pass the gate. A write with no anchors is allowed only for types that are not claiming to pin code; it does not enter the reverse index and does not arm the ratchet.
 
-Default `status` when omitted: `stable`. Bootstrap still sets `draft` + `stale_after` explicitly.
+Default `status` when omitted: `stable`. Bootstrap still sets `draft` + `stale_after` explicitly. `repocodex write` of a no-anchor Playbook (or other unanchored typed page) is a supported CLI path in this change: accepted without the pin gate, not entered in the reverse index, not arming the ratchet.
 
 ### Sources and actors are rewritten at the boundary
 
@@ -61,6 +67,9 @@ Root index frontmatter: only `okf_version: "0.2"`. Engine schema version stays i
 - **External OKF tools still will not understand `verification.anchors`.** → They will ignore extra keys and still see title, body, links, sources. That is enough for interchange of *why*. Pin semantics stay RepoCodex-specific, which is producer policy OKF allows.
 - **Moving the reverse index breaks old CI caches.** → One-time path change; install/Action look at the new location.
 - **Existing fixtures use `agent:` and string sources.** → Compatibility read + rewrite on next write; tests updated in this change.
+- **Sample concepts still stamp `verified: { by: process:repocodex-rg }`.** → That process is the pin attester. Fixtures omit `verified` or name a definition reviewer (`human:` / producer/version), so they do not teach a gate receipt.
+- **A leftover `.context/reverse-index.md` plus a synced new path makes CI green.** → Delete on regenerate; remaining leftover is `index_sync`.
+- **Coding skill still says commit `.context/` only.** → Agents leave `.repocodex/reverse-index.md` unstaged; hook working-tree sync local-passes. Skill and staged index-sync both change.
 
 ## Migration Plan
 
@@ -68,11 +77,14 @@ Root index frontmatter: only `okf_version: "0.2"`. Engine schema version stays i
 2. Stop stamping `verified` on write/reanchor.
 3. Relocate reverse index; update validate sync and install docs.
 4. Catalog/log format; bootstrap sources objects; actor emission.
-5. Rewrite fixtures and architecture §5 examples. Do not require bundle rewrites in customer repos until their next write, except reverse-index path which CI will flag as desync until regenerated.
+5. Rewrite fixtures and architecture §5 examples. Do not require bundle rewrites in customer repos until their next write, except reverse-index path which CI will flag as desync until regenerated (including leftover in-bundle files).
+6. Point the coding skill at `.repocodex/reverse-index.md`; make staged index-sync read the git index.
 
 **Rollback:** revert the change; leave customer `.context/` bodies intact (anchors unchanged). Restore reverse-index path if needed.
 
 ## Open Questions
 
-- Exact on-disk path for a sharded reverse index (single file with prefixes vs one file per `.context` root).
-- Whether `repocodex write` of a no-anchor Playbook should be a supported CLI path in this change or only load/retrieve.
+Resolved:
+
+- Sharded reverse index: one file per `.context` root at `.repocodex/reverse-index/<escaped-parent>.md`.
+- No-anchor Playbook write is a supported CLI path in this change.

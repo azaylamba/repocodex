@@ -32,7 +32,7 @@ You are working in a repository that uses RepoCodex executable memory.
    - `REANCHOR`: apply the emitted anchor patch (engine never mutates the tree). Stage it. `repocodex reconcile --apply-patch '<json>'`.
    - `RECONCILE` / `DRIFT`: you **must** repair in this change via `repocodex write` / `repocodex reconcile`. Do not finish the turn or commit.
 
-5. **Commit** includes `.context/` when you wrote or reanchored memory. The pre-commit hook denies unrepaired DRIFT.
+5. **Commit** includes `.context/` **and** `.repocodex/reverse-index.md` (plus matching files under `.repocodex/reverse-index/` when shards exist) when you wrote or reanchored memory. Committing `.context/` alone does not include the reverse index. The pre-commit hook denies unrepaired DRIFT.
 
 ## Anchor authoring
 

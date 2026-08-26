@@ -4,7 +4,7 @@ from pathlib import Path
 
 from repocodex.commands.write import write_memory
 from repocodex.metrics import record_metric
-from repocodex.schema import envelope, parse_concept, serialize_concept, stamp
+from repocodex.schema import envelope, parse_concept, serialize_concept
 from repocodex.store.bundle import concept_path, discover_context_roots
 from repocodex.store.reverse_index import regenerate_all
 
@@ -26,7 +26,6 @@ def apply_anchor_patch(repo: Path, patch: dict) -> Path:
         doc.anchors[idx].path = patch["to"]
         if patch.get("terms"):
             doc.anchors[idx].all_of = list(patch["terms"])
-        doc.frontmatter.verified = stamp("process:repocodex-reanchor")
     path.write_text(serialize_concept(doc), encoding="utf-8")
     regenerate_all(repo)
     if patch.get("op") == "replace_path":
