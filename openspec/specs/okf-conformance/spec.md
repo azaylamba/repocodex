@@ -1,4 +1,10 @@
-## ADDED Requirements
+# okf-conformance Specification
+
+## Purpose
+
+Keep `.context/` a conformant OKF v0.2 bundle: every non-reserved markdown file is a typed concept, reserved names are only `index.md` and `log.md`, and runtime artifacts live outside the bundle. The product loop is unchanged: the body is the why; agents retrieve it and read pinned code; the required check attests pins.
+
+## Requirements
 
 ### Requirement: The context tree is a conformant OKF v0.2 bundle
 
