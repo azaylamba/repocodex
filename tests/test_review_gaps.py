@@ -76,12 +76,17 @@ def test_claim_outside_matched_region_is_not_credited(repo):
     assert any(f["classification"] == "CLAIM_BROKEN" for f in findings)
 
 
+def _append_outside_region(path: Path, snippet: str) -> None:
+    original = path.read_text(encoding="utf-8")
+    path.write_text(original.rstrip() + "\n" + ("\n" * 80) + snippet, encoding="utf-8")
+
+
 def _weaken_streamer(text: str) -> str:
     return text.replace("yield parsed.rows", "return parsed.rows")
 
 
 def test_unrelated_context_edit_does_not_clear_ratchet(repo):
-    repo.streamer.write_text(_weaken_streamer(repo.streamer.read_text(encoding="utf-8")), encoding="utf-8")
+    _append_outside_region(repo.streamer, "def refund_batches():\n    return []\n")
     (repo.root / ".context" / "log.md").write_text("# log\n- unrelated note\n", encoding="utf-8")
     payload = validate(repo.root)
     assert payload["skipped_memory"]
@@ -176,10 +181,7 @@ def test_shadow_reports_skipped_memory_without_blocking(repo):
         'engine_version = "1.0.0"\nposture = "shadow"\n',
         encoding="utf-8",
     )
-    repo.streamer.write_text(
-        repo.streamer.read_text(encoding="utf-8").replace("yield parsed.rows", "return parsed.rows"),
-        encoding="utf-8",
-    )
+    _append_outside_region(repo.streamer, "def refund_batches():\n    return []\n")
     payload = validate(repo.root)
     assert payload["skipped_memory"]
     assert payload["blocking"] is False
@@ -354,8 +356,8 @@ def test_staged_rename_reanchors(repo):
 
 def test_metrics_carry_measured_values(repo):
     payload = validate(repo.root)
-    assert payload["false_drift_rate"] is not None
-    assert payload["tokens_per_turn"] is not None
+    assert payload["false_drift_rate"] == 0.0
+    assert "tokens_per_turn" not in payload
     sink = repo.root / ".repocodex" / "metrics.jsonl"
     assert sink.exists()
     assert not (repo.root / ".context" / "metrics.jsonl").exists()

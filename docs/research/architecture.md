@@ -52,7 +52,7 @@ flowchart TD
 - Persist *why* next to *what*, in git, so it branches, merges, and rolls back with the code.
 - Let the agent that writes the code also write the memory, in the same change.
 - Prove every memory record is about live code text (mandatory anchors + write-gate tightness), for **any grep-able file** — source, config, SQL, IaC, docs.
-- Answer "what code and which business scenarios does this diff touch?" through an agent recipe over grep/read plus the intent graph — with the deterministic parts enforced and the judgment parts advisory.
+- Answer "what code and which business scenarios does this diff touch?" through an agent recipe over grep/read plus the intent graph — with the deterministic parts enforced and the judgment parts advisory. Scenario integrity is that same loop: the agent retrieves the linked why and reads the pinned code. It is not a test suite and not a scenario-to-test table.
 - Keep retrieval token-cheap (reverse index + staged reads; never dump `.context/`).
 - Make mechanical memory maintenance unskippable (engine + hook + required CI), while keeping the required CI check strictly deterministic.
 - Give humans a governed escape hatch instead of pretending they never touch the repo.
@@ -63,7 +63,7 @@ flowchart TD
 - Replacing Semgrep, ESLint, import-linter, ArchUnit, CodeQL, or other enforcement tools. (RepoCodex *pins its memory to their configs* — see §13.3 — it does not reimplement them.)
 - A persisted code graph, AST witnesses, Tree-sitter, SCIP, or ast-grep. These were evaluated and **removed by design, not postponed**: the witness-authoring ergonomics failed self-validation (the Revision 1 spec's own example rules did not match the code they described), and the code-graph precision they promised was, in practice, name-based heuristics — which agents replicate with grep plus judgment.
 - Using an LLM as the liveness attester (an LLM asked "is this memory still valid?" will say yes so the task can proceed).
-- Nondeterministic findings inside the required CI check.
+- Using a test suite or a scenario-to-test table as the product's check that existing scenarios still hold. Why lives in OKF; agents retrieve it and read the pinned code.
 
 ---
 
@@ -173,7 +173,7 @@ RepoCodex extensions (OKF allows unknown keys; consumers must preserve them):
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `verification` | yes | Engine + anchors (§4.2) |
-| `claims` | on any concept whose prose states checkable facts | **Structured claim list**: `claims: [{ literal: "3", subject: "grace_cycles" }, { literal: "ENTERPRISE" }]`. Each declared literal must appear in the anchor terms and in the matched source — checked at write time by the gate (§6.1) **and on every validation** as `CLAIM_BROKEN` (§6.2). This replaces prose-mining with a deterministic check and removes the incentive to write vaguer prose to dodge the gate. The optional `subject` discriminator names what the literal is a value of, so contradiction detection can compare like with like (§13.3). |
+| `claims` | on any concept whose prose states checkable facts | **Structured claim list**: `claims: [{ literal: "3", subject: "grace_cycles", anchor: 0 }, { literal: "ENTERPRISE" }]`. Each declared literal must appear in the **owning** anchor's terms and in that anchor's matched source — checked at write time by the gate (§6.1) **and on every validation** as `CLAIM_BROKEN` (§6.2). The optional `anchor` index names which entry in `verification.anchors` owns the literal; omit it only when the owner is unambiguous. The optional `subject` discriminator names what the literal is a value of, so contradiction detection can compare like with like (§13.3). |
 | `supersedes` | on why-change | Path of the deprecated predecessor |
 | `rationale` | on mutation | Why the why changed |
 | `format_version` | yes (bundle-level, in root `index.md`) | Migration marker for future OKF/schema revisions |
@@ -183,8 +183,8 @@ RepoCodex extensions (OKF allows unknown keys; consumers must preserve them):
 ### 5.3 Concept types
 
 - **TechnicalDecision** — narrative why bound to code. Must anchor at least one distinctive construct from the why (the term `yield`, an error string), not just a name.
-- **InvariantContract** — a must-still-hold claim. Declared `claims` literals are frozen into anchors and re-checked on every validation as `CLAIM_BROKEN` when absent from the matched region (§6.2), so changing `3 → 1` is a blocking business-rule change rather than a WEAK term-count miss.
-- **BusinessWorkflow** — a cross-package flow with one anchor per participating site (§13.1). Kept thin: ordering, boundaries, links to per-step pages.
+- **InvariantContract** — a must-still-hold claim. Declared `claims` literals are frozen into anchors and re-checked on every validation as `CLAIM_BROKEN` when absent from the matched region (§6.2), so changing `3 → 1` is a blocking business-rule change rather than a WEAK term-count miss. Each claim names the anchor that owns it via an optional `anchor` index into `verification.anchors` (alongside `literal` and `subject`); omitted owners resolve to the sole anchor, or to the single anchor whose `all_of` declares the literal, and are rejected when ambiguous. The claim is evaluated against that owning anchor alone.
+- **BusinessWorkflow** — a cross-package flow with one anchor per participating site (§13.1). Kept thin: ordering, boundaries, links to per-step pages. A claim on a workflow is owned by one of those sites, not required to hold at every site.
 - **GuardrailDecision** — the why behind a negative/global architectural rule, anchored to the **enforcement config** of the tool that enforces it (§13.3).
 
 All types require passing anchors. A concept without an anchor is not a valid concept.
@@ -258,7 +258,7 @@ The agent drafts anchors; the engine accepts or rejects with JSON. Fail closed. 
 1. **Match.** Every anchor's terms must hit its pinned path (within `near`/`scope_lines` when present). Zero hits → reject.
 2. **In-file uniqueness.** The term combination must locate a unique region in the pinned file. Multiple disjoint co-occurrence regions → reject (`ambiguous_in_file`), unless the concept declares multiple anchors covering them.
 3. **Distinctiveness.** Each anchor must include at least one term whose repo-wide hit count is below a configurable ceiling. Path-only anchors, single common-word terms, and import-line terms are rejected (`not_distinctive`). The gate reports each term's repo-wide count so the agent can choose better terms mechanically. Stable tokens — string literals, error messages, enum values, numeric thresholds — are preferred over renameable identifiers, and the gate ranks candidate terms accordingly in its reject payload.
-4. **Claims.** Every `claims[].literal` must appear in the anchor terms **and** in the matched source region. "3-cycle grace" prose with no `3` anchored → reject (`claim_not_anchored`).
+4. **Claims.** Every `claims[].literal` must appear in the **owning** anchor's terms **and** in that anchor's matched source region. The owner is `claims[].anchor` (an index into `verification.anchors`), or is resolved to the sole anchor / the single `all_of` that declares the literal. "3-cycle grace" prose with no `3` anchored → reject (`claim_not_anchored`).
 5. **Exclusions.** Pins inside `.gitignore`d, vendored, or `.repocodexignore`d paths are rejected. Generated files are excluded from candidate search and distinctiveness counting too, so codegen cannot flip anchors ambiguous.
 
 Reject payload example:
@@ -283,7 +283,7 @@ Reject payload example:
    - `git diff -M` 1:1 rename of the pinned path, or `git log -S`/pickaxe on the most distinctive term finding **exactly one** new location where the term set co-occurs → **REANCHOR**. The engine emits an anchor patch (updated `path`/terms in the concept's frontmatter); **the caller (agent, hook, or CI job) applies and stages it** — the engine never mutates the working tree itself, which keeps a single writer and avoids racing staged hunks and other hooks.
    - Zero or multiple relocation candidates → **DRIFT**: RECONCILE JSON with `candidates[]` (from the pickaxe/grep search) and impacted scenario list. The coding agent repairs; the new state must pass the write gate.
 
-**Claims are evaluated separately, and this is not optional.** Steps 1–4 answer *is this concept still about this code?* — a deliberately forgiving question, which is why partial term loss degrades to WEAK instead of paging anyone. A declared `claims[].literal` answers a different question: *is the specific fact this prose asserts still true in the code?* That one is binary, and forgiveness is the bug. So for every stable concept carrying `claims`, each declared literal is checked as a token against the anchor's matched region, **independently of the term-count class above**:
+**Claims are evaluated separately, and this is not optional.** Steps 1–4 answer *is this concept still about this code?* — a deliberately forgiving question, which is why partial term loss degrades to WEAK instead of paging anyone. A declared `claims[].literal` answers a different question: *is the specific fact this prose asserts still true in the code?* That one is binary, and forgiveness is the bug. So for every stable concept carrying `claims`, each declared literal is checked as a token against **its owning anchor's** matched region, **independently of the term-count class above**:
 
 5. Every declared literal present in the matched region → no claim finding. The anchor's own class from steps 2–4 stands unmodified.
 6. Any declared literal absent from the matched region → **CLAIM_BROKEN**, reported *alongside* the anchor class, blocking outside `shadow`, repairable only through a gate-passing write (normally a supersede with `rationale`).
@@ -333,6 +333,8 @@ Blast radius has two halves with different natures, and V1 treats them different
 **Enforcement split (a V1 rule, not a preference):** the code-side walk is nondeterministic — two runs can surface different caller sets — so its findings post to the **advisory review check only**. The required CI check contains nothing an agent judged. This is what keeps the required check reproducible and therefore alive (§12).
 
 Both coding and review skills must run the impact recipe on every diff. Missed impact is a skipped recipe step, and the review agent flags it.
+
+That read of retrieved why plus pinned code is how an agent checks that an existing scenario still holds. The recipes do not invoke a test runner, and a test-suite result is not a substitute for the retrieved concepts. Scenario-integrity judgment belongs on the advisory check; the required check only attests that the why is still pinned.
 
 ---
 
@@ -409,7 +411,7 @@ sequenceDiagram
   A->>G: commit including .context
 ```
 
-Stop/commit is denied until validate passes. A LIVE pass requires no `.context/` hunk.
+Stop/commit is denied until validate passes. A LIVE pass requires no `.context/` hunk **for edits that stay inside the region the anchor attests**. New behavior added outside every matched region of a covered file still arms the skipped-memory ratchet — a live anchor proves the pinned region's memory is intact and says nothing about code added elsewhere in the file.
 
 ### 11.2 Review agent
 
@@ -424,7 +426,7 @@ A stateless action runs the headless engine on the PR diff. The set of failure r
 
 1. any stable anchor is DRIFT and unrepaired — i.e., unreconciled detachment;
 2. any stable concept is **CLAIM_BROKEN**: a declared literal is gone from the matched region (§6.2);
-3. the **skipped-memory ratchet** fires: the diff introduces substantive change to a file that already carries at least one attested concept, and no concept *pinning that file* was added, modified, or attesting in the same change. Correspondence is per-file — an edit elsewhere under `.context/` does not discharge an unrelated file's obligation. Ratchet scope applies only to already-covered files (brownfield-safe, §12.2);
+3. the **skipped-memory ratchet** fires: the diff introduces substantive change to a file that already carries at least one attested concept, and the obligation is not discharged. Discharge requires that a concept *pinning that file* was added or modified in the same change, or that every substantive hunk falls inside a matched region of an attesting anchor that pins it. An attesting (LIVE) anchor does not by itself discharge the whole file. Correspondence is per-file — an edit elsewhere under `.context/` does not discharge an unrelated file's obligation. Ratchet scope applies only to already-covered files (brownfield-safe, §12.2);
 4. the committed reverse index is out of sync with anchors;
 5. an unresolved **CONTRADICTION** exists: two live concepts assert different literals for the same claim subject, or two live concepts supersede the same predecessor (§13.3, §15). This is a frontmatter comparison — deterministic, no model — and an unresolved one leaves the graph genuinely ambiguous about which why is current.
 
@@ -447,7 +449,7 @@ A required check that blocks all work in a repo with zero coverage gets its requ
 | Posture | Behavior |
 | --- | --- |
 | `shadow` | Everything runs and reports; nothing blocks. **Reporting means computing** — every finding the posture declines to block on (skipped memory, claim breakage, drift, contradiction, index desync) is still evaluated, because the metrics that decide readiness are derived from them. Suppressing a computation here is not "shadow," it is blindness: false-drift rate, anchor-rejection reasons, reconcile retries, tokens per turn, and validate latency must carry measured values, not placeholders, or the ladder cannot be climbed on evidence. |
-| `ratchet` | DRIFT, CLAIM_BROKEN, and pre-commit deny enforced (they only fire on already-covered code). Skipped-memory applies only to covered files, and per file: the obligation is discharged when a concept *pinning that file* is added, modified, or attesting — not by any edit anywhere under `.context/`. Only substantive change arms it; whitespace and comment-only edits do not. Escape hatch live. |
+| `ratchet` | DRIFT, CLAIM_BROKEN, and pre-commit deny enforced (they only fire on already-covered code). Skipped-memory applies only to covered files, and per file: the obligation is discharged when a concept *pinning that file* is added or modified, or when every substantive hunk falls inside a matched region of an attesting anchor. A LIVE classification alone does not discharge the whole file. Only substantive change arms it; whitespace and comment-only edits do not. Working-tree scope compares against `HEAD` so staging does not hide the change. Escape hatch live. |
 | `full` | Ratchet plus: skipped-memory extends to agent-authored commits repo-wide (detectable from `generated.by` and harness identity), sampling audits scheduled. |
 
 `repocodex bootstrap` seeds attested coverage before the ratchet tightens.
@@ -520,7 +522,8 @@ One concept per why, not per edit; update in place when the why is unchanged. `s
 - **Validate:** scoped to concepts whose pinned paths intersect the diff (one reverse-index read). Tens of file-scoped rg searches per typical PR — milliseconds each. Full-repo attest (nightly) over thousands of concepts is seconds and trivially parallel.
 - **Write gate:** a handful of rg counts at write/reconcile time only; never on the read path.
 - **Distinctiveness decay:** terms distinctive at write time can dilute as the repo grows. This cannot cause false drift (liveness is in-file, §6.3); it only widens relocation candidate lists. `repocodex audit` re-scores anchor distinctiveness periodically and queues weak anchors for opportunistic tightening — housekeeping, not a treadmill.
-- **Token budget:** the code-side impact walk is the marginal cost per turn. The skill bounds it (hit ranking, read caps, exclusions), and shadow posture measures tokens-per-turn before any gate is enforced. No SLO is advertised until measured — this discipline extends to agent-side loop cost, not just engine latency.
+- **False-drift rate:** the share of `DRIFT` classifications that a later reanchor showed were followable relocations — drift whose repair re-points the anchor at code equivalent to the pinned region. It is derived over a window of recorded `drift` and `reconcile` metric events at **read time**, not as a per-validation ratio of drift to outcomes. A single validate whose pin was deleted reports `0.0` while still listing the drift in `lost`.
+- **Token budget / per-turn cost:** measured from the context actually served to the caller by `repocodex context` (payload characters / 4), and recorded on that command. Validation does not re-run retrieval or per-concept churn inference to compute it. The code-side impact walk remains the other marginal cost; the skill bounds it (hit ranking, read caps, exclusions), and shadow posture measures both before any gate is enforced. No SLO is advertised until measured.
 - **Monorepos:** `.context/` shards by directory ownership; per-directory reverse indexes; CI attests affected packages only.
 
 ---
@@ -554,6 +557,32 @@ The rows above were found by self-validating the design. These four were found b
 | 14 | Ratchet correspondence was unscoped. "Neither updates nor writes memory" did not say *which* memory, so any `.context/` edit could discharge every covered file's obligation — and combined with row 13, a business-rule change plus an unrelated memory note passed the required check. | Per-file correspondence: only a concept pinning *that* file discharges it, and only substantive change arms it (§11.3, §12.2). | Stricter scoping can annoy cross-cutting edits; an attesting anchor also discharges, and ambiguity resolves toward not firing. |
 | 15 | Determinism inputs were unstated, so ambient state leaked into verdicts: a distinctiveness ceiling derived from a filesystem walk moved when `node_modules` appeared, generated identities used a process-seeded hash, relocation ignored the caller's diff scope, and the version pin was reported rather than enforced. | Verdicts depend only on tracked, non-excluded contents plus the requested diff scope; pins are enforced (§15). | Environment-specific ripgrep builds remain a theoretical divergence; the pin bounds it. |
 | 16 | The required check's failure set read as closed in §11.3 while §13.3 and §15 required a further blocking reason, so an implementation could satisfy one passage and violate the other. Separately, CONTRADICTION fired on merely-differing claims, producing false blocks. | One enumerated set in §11.3; contradiction requires a shared claim subject (§13.3). | Enumeration must be maintained as a spec change; that is the point of stating it once. |
+
+### 17.1 continued — breaks found in the v1-review-gaps implementation (Revision 2.2)
+
+These were found by probing the running engine after `fix-repocodex-v1-review-gaps`, not by re-reading that change's specs.
+
+| # | Design break | Revision 2.2 solution | Residual risk |
+| --- | --- | --- | --- |
+| 17 | Claims were evaluated conjunctively across every anchor, so a `BusinessWorkflow` could not carry a claim that holds at only one site. | Each claim declares an owning `anchor` index and is evaluated against that anchor alone (§5.3, §6.1). | Reordering anchors by hand re-points a positional owner; the write gate re-evaluates on the next write. |
+| 18 | A LIVE anchor discharged skipped-memory for the whole file, so appending new behavior to a covered file passed the ratchet. | Discharge requires a pinning-concept edit or that every substantive hunk fall inside a matched region (§11.1, §11.3, §12.2). Unattributable hunks arm. | Region arithmetic can misattribute overlapping hunks; false blocks are recoverable by writing memory. |
+| 19 | Working-tree substantive-change detection ignored staged content, so `git add` hid the ratchet. | Working-tree scope diffs against `HEAD` (§12.2). | None for the staged and base scopes, which were already correct. |
+| 20 | `shadow` suppressed `blocking_reasons` and `rejection_reasons`, withholding the measurement that posture exists to produce. | Reasons are computed identically in every posture; only `blocking` differs. | Operators who promoted on empty-reason shadows will see a fuller (correct) distribution. |
+| 21 | `false_drift_rate` reported the raw drift rate; `validate` loaded concept bodies and inferred churn solely to size a metric. | False drift is derived at read time from `drift`/`reconcile` events; per-turn cost is recorded by `repocodex context` (§16). | The metric is unavailable on a single run — it is a promotion criterion over a shadow window. |
+| 22 | `repocodex repair` reported `invoked: true` after running `--help`. | `invoked` is true only when the repair prompt was delivered and the harness exited 0. | Unknown harnesses are undeliverable rather than probed. |
+| 23 | `memory-exempt` acknowledgment could be self-issued by the pull request author, or by setting an environment variable on a developer machine. | Action accepts only an approving review from someone other than the author; env evidence is CI-only (§12.3). | A bot without approval rights cannot acknowledge an exemption — intended. |
+| 24 | A scenario-to-test table stood in for "no existing scenario is broken," and several mapped tests did not actually assert the scenario. | The table is deleted. Scenario integrity is the agent reading retrieved OKF then code; the required check stays a pin check (§2, §8). | An agent can retrieve the why and ignore it; skills and the advisory job are the pressure. Self-hosting this loop on RepoCodex itself needs a `.context/` bundle that does not exist yet. |
+
+### 17.2 Self-hosting this loop on RepoCodex
+
+Applying the same agent-read loop to this repository is a **separate change**. That change must:
+
+- seed a `.context/` bundle whose concepts pin engine source the way application concepts pin application source;
+- use OKF links for multi-file scenarios rather than a test-name table;
+- keep the required check as the existing pin check (anchors, claims, ratchet, index, contradiction);
+- report scenario-integrity judgment only on the advisory surface.
+
+Until that bundle exists, the OKF-loop capability reports `unsatisfied` with reason `no_okf_bundle` and does not fall back to pytest.
 
 ---
 

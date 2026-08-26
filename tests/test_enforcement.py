@@ -21,12 +21,8 @@ def test_brownfield_uncovered_passes_ratchet(uncovered_repo: Path):
 
 
 def test_covered_file_without_memory_fails_ratchet(repo):
-    repo.streamer.write_text(
-        repo.streamer.read_text(encoding="utf-8").replace(
-            "yield parsed.rows", "return parsed.rows"
-        ),
-        encoding="utf-8",
-    )
+    text = repo.streamer.read_text(encoding="utf-8")
+    repo.streamer.write_text(text.rstrip() + "\n" + ("\n" * 80) + "def refund_batches():\n    return []\n", encoding="utf-8")
     payload = validate(repo.root)
     assert payload["skipped_memory"]
     assert payload["blocking"] is True

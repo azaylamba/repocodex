@@ -11,8 +11,7 @@ from repocodex.engine.dilution import dilution_warnings
 from repocodex.engine.impact import intent_impact
 from repocodex.engine.liveness import CLAIM_BROKEN, DRIFT, LIVE, REANCHOR, WEAK, classify_anchor, evaluate_claims
 from repocodex.engine.ratchet import skipped_memory
-from repocodex.metrics import Timer, record_metric
-from repocodex.retrieval import retrieve
+from repocodex.metrics import Timer, false_drift_rate, record_metric
 from repocodex.schema import ConceptStatus, envelope
 from repocodex.store.bundle import load_concepts
 from repocodex.store.reverse_index import index_sync_errors, merged_index
@@ -68,9 +67,15 @@ def _worst(outcomes: list[str]) -> str:
     return worst
 
 
+def _in_ci() -> bool:
+    return os.environ.get("CI", "").lower() in {"1", "true", "yes"} or os.environ.get(
+        "GITHUB_ACTIONS", ""
+    ).lower() in {"1", "true", "yes"}
+
+
 def _ack_evidence(root: Path, ack_file: str | None) -> dict | None:
     env_evidence = os.environ.get("REPOCODEX_REVIEW_ACK_EVIDENCE")
-    if env_evidence:
+    if env_evidence and _in_ci():
         return {"via": "ci_context", "evidence": env_evidence[:500]}
     path_str = ack_file or os.environ.get("REPOCODEX_ACK_FILE")
     if not path_str:
@@ -156,13 +161,11 @@ def validate(
     impacted = intent_impact(files, concepts, index)
     contradictions = contradiction_flags(concepts, root)
     sync_errors = index_sync_errors(root)
-    attested = {o.concept for o in outcomes if o.classification == LIVE}
     ratchet = skipped_memory(
         files,
         concepts,
         index,
         config,
-        attested_identities=attested,
         posture=config.posture,
         staged=staged,
         base=base,
@@ -217,25 +220,24 @@ def validate(
 
     if config.posture == "shadow":
         blocking = False
-        emitted_reasons: list[str] = []
     else:
         blocking = bool(blocking_reasons)
-        emitted_reasons = blocking_reasons
 
-    classes = [o.classification for o in outcomes]
-    total = max(1, len(classes))
-    drift_n = sum(1 for c in classes if c == DRIFT)
-    false_drift_rate = drift_n / total
-    retrieved = retrieve(root, [p for p in files if not p.startswith(".context/")], include_bodies=True)
-    chars = sum(len(item.get("body") or "") for item in retrieved.get("concepts") or [])
-    tokens_per_turn = chars / 4.0
+    for outcome in outcomes:
+        if outcome.classification == DRIFT:
+            record_metric(
+                root,
+                "drift",
+                {"concept": outcome.concept, "path": outcome.path, "reason": outcome.reason},
+            )
+    derived_false_drift = false_drift_rate(root)
 
     payload = envelope(
         {
             "result": result,
             "posture": config.posture,
             "blocking": blocking,
-            "blocking_reasons": emitted_reasons,
+            "blocking_reasons": blocking_reasons,
             "outcomes": [o.to_json() for o in outcomes],
             "lost": lost,
             "weak": weak,
@@ -252,8 +254,7 @@ def validate(
             "exemption_refused": exemption_refused,
             "audit_entries": audit_entries,
             "repair_tasks": repair_tasks,
-            "false_drift_rate": false_drift_rate,
-            "tokens_per_turn": tokens_per_turn,
+            "false_drift_rate": derived_false_drift,
             "latency_ms": timer.ms(),
         },
         engine_version=ENGINE_VERSION,
@@ -265,10 +266,9 @@ def validate(
             "result": result,
             "latency_ms": payload["latency_ms"],
             "posture": config.posture,
-            "rejection_reasons": emitted_reasons,
+            "rejection_reasons": blocking_reasons,
             "reconcile_retries": len(lost),
-            "false_drift_rate": false_drift_rate,
-            "tokens_per_turn": tokens_per_turn,
+            "false_drift_rate": derived_false_drift,
         },
     )
     return payload

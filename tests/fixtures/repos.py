@@ -97,6 +97,38 @@ Capture must post to the ledger before the receipt is sent.
 Related: [enterprise grace](../invariants/enterprise-grace-period.md).
 '''
 
+CLAIMED_WORKFLOW_CONCEPT = '''\
+---
+type: BusinessWorkflow
+title: Checkout capture spans billing ledger and notify
+tags: [checkout]
+generated: { by: agent:test, at: 2026-08-25T12:00:00Z }
+verified: { by: process:repocodex-rg, at: 2026-08-25T12:00:01Z }
+status: stable
+claims:
+  - literal: "CHECKOUT_HOLD"
+    subject: hold_token
+    anchor: 0
+verification:
+  engine: ripgrep
+  anchors:
+    - path: src/billing/checkout_hold.ts
+      all_of: ["CHECKOUT_HOLD", "billCheckout"]
+    - path: src/ledger/posting.py
+      all_of: ["post_capture", "LEDGER_CAPTURE"]
+    - path: src/notify/emailer.py
+      all_of: ["send_receipt", "RECEIPT_TEMPLATE"]
+---
+
+Capture must post to the ledger before the receipt is sent.
+'''
+
+CHECKOUT_HOLD_SOURCE = '''\
+export function billCheckout() {
+  const CHECKOUT_HOLD = "CHECKOUT_HOLD";
+}
+'''
+
 GUARDRAIL_CONCEPT = '''\
 ---
 type: GuardrailDecision
@@ -211,3 +243,24 @@ def write_architecture_fixtures(root: Path) -> SampleRepo:
 
     regenerate_all(root)
     return SampleRepo(root=root, payment_gateway=payment, streamer=streamer)
+
+
+def write_claimed_workflow(root: Path, *, commit: bool = False) -> Path:
+    billing = root / "src" / "billing" / "checkout_hold.ts"
+    billing.parent.mkdir(parents=True, exist_ok=True)
+    billing.write_text(CHECKOUT_HOLD_SOURCE, encoding="utf-8")
+    path = root / ".context" / "workflows" / "checkout-hold.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(CLAIMED_WORKFLOW_CONCEPT, encoding="utf-8")
+    from repocodex.store.reverse_index import regenerate_all
+
+    regenerate_all(root)
+    if commit:
+        subprocess.run(["git", "add", "-A"], cwd=root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "claimed workflow", "--no-verify"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+    return path

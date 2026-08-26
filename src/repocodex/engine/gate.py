@@ -14,6 +14,7 @@ from repocodex.engine.match import (
     min_match_for,
     only_import_hits,
     read_pinned,
+    resolve_claim_owner,
 )
 from repocodex.schema import ConceptDocument
 from repocodex.tools.git import git_check_ignore
@@ -90,7 +91,10 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
             reasons=["concept has no anchors"],
         )
 
-    for anchor in doc.anchors:
+    full_regions_by_index: dict[int, list] = {}
+    texts_by_index: dict[int, str] = {}
+
+    for index, anchor in enumerate(doc.anchors):
         if path_excluded(anchor.path, config):
             tighten.append("excluded_path")
             reasons.append(f"{anchor.path} is excluded")
@@ -119,12 +123,14 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
             tighten.append("no_match")
             reasons.append(f"{anchor.path} is missing")
             continue
+        texts_by_index[index] = text
 
         matched = match_anchor(anchor, text, default_scope=config.scope_lines)
         required = min_match_for(anchor)
         full_regions = [
             region for region in matched.regions if len(region.terms_hit) >= len(anchor.all_of)
         ]
+        full_regions_by_index[index] = full_regions
         if required == len(anchor.all_of):
             live_regions = full_regions
         else:
@@ -152,19 +158,37 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
             tighten.append("not_distinctive")
             reasons.append(f"import-line terms only for {anchor.path}")
 
-        if doc.frontmatter.claims:
-            if not full_regions:
-                for claim in doc.frontmatter.claims:
-                    tighten.append("claim_not_anchored")
-                    reasons.append(f'claim "{claim.literal}" is not anchored')
-            else:
-                region_text = full_regions[0].source(text.splitlines())
-                for claim in doc.frontmatter.claims:
-                    in_terms = claim_in_terms(claim.literal, anchor.all_of)
-                    in_source = literal_as_token(claim.literal, region_text)
-                    if not in_terms or not in_source:
-                        tighten.append("claim_not_anchored")
-                        reasons.append(f'claim "{claim.literal}" is not anchored')
+    if doc.frontmatter.claims:
+        for claim in doc.frontmatter.claims:
+            owner, error = resolve_claim_owner(claim, doc.anchors)
+            if error == "out_of_range":
+                tighten.append("invalid_claim_anchor")
+                reasons.append(f"claim owner index {claim.anchor} is out of range")
+                continue
+            if error == "ambiguous":
+                tighten.append("declare_anchor")
+                reasons.append(
+                    f'claim "{claim.literal}" matches multiple anchors; declare claims[].anchor'
+                )
+                continue
+            if error == "claim_not_anchored" or owner is None:
+                tighten.append("claim_not_anchored")
+                reasons.append(f'claim "{claim.literal}" is not anchored')
+                continue
+            claim.anchor = owner
+            owner_anchor = doc.anchors[owner]
+            full_regions = full_regions_by_index.get(owner, [])
+            text = texts_by_index.get(owner)
+            if not full_regions or text is None:
+                tighten.append("claim_not_anchored")
+                reasons.append(f'claim "{claim.literal}" is not anchored')
+                continue
+            region_text = full_regions[0].source(text.splitlines())
+            in_terms = claim_in_terms(claim.literal, owner_anchor.all_of)
+            in_source = literal_as_token(claim.literal, region_text)
+            if not in_terms or not in_source:
+                tighten.append("claim_not_anchored")
+                reasons.append(f'claim "{claim.literal}" is not anchored')
 
     tighten = list(dict.fromkeys(tighten))
     accepted = not tighten

@@ -45,9 +45,16 @@ def test_write_and_reconcile_gate(repo):
 def test_repair_install_bootstrap_audit(repo):
     repair = json.loads(run_cli(["repair"], cwd=repo.root).stdout)
     assert "engine_version" in repair
-    assert repair.get("error") == "no_agent_harness" or repair.get("invoked") is True
+    assert "prompt" in repair
     if repair.get("error") == "no_agent_harness":
-        assert "prompt" in repair
+        assert repair.get("ok") is False
+        assert repair.get("invoked") is False
+    elif repair.get("invoked") is True:
+        assert repair.get("ok") is True
+    else:
+        assert repair.get("invoked") is False
+        assert repair.get("ok") is False
+        assert repair.get("error") in {"undeliverable_harness", "harness_invocation_failed"}
     installed = json.loads(run_cli(["install"], cwd=repo.root).stdout)
     assert any("pre-commit" in item for item in installed["installed"])
     assert any("repocodex.yml" in item for item in installed["installed"])

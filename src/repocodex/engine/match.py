@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from repocodex.schema import Anchor
+from repocodex.schema import Anchor, Claim
 
 MARKER_RE = re.compile(r"why:\s*", re.IGNORECASE)
 IMPORT_RE = re.compile(
@@ -59,6 +59,23 @@ def literal_as_token(literal: str, text: str) -> bool:
 
 def claim_in_terms(literal: str, terms: list[str]) -> bool:
     return any(literal_as_token(literal, term) or literal == term for term in terms)
+
+
+def resolve_claim_owner(claim: Claim, anchors: list[Anchor]) -> tuple[int | None, str | None]:
+    """Return (anchor_index, error). error is None when the owner is unambiguous."""
+    n = len(anchors)
+    if claim.anchor is not None:
+        if claim.anchor < 0 or claim.anchor >= n:
+            return None, "out_of_range"
+        return claim.anchor, None
+    if n == 1:
+        return 0, None
+    matches = [i for i, anchor in enumerate(anchors) if claim_in_terms(claim.literal, anchor.all_of)]
+    if len(matches) == 1:
+        return matches[0], None
+    if not matches:
+        return None, "claim_not_anchored"
+    return None, "ambiguous"
 
 
 @dataclass

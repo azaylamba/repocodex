@@ -9,6 +9,7 @@ from repocodex.engine.match import (
     literal_as_token,
     min_match_for,
     read_pinned,
+    resolve_claim_owner,
 )
 from repocodex.engine.relocate import relocate_anchor
 from repocodex.schema import Anchor, ConceptDocument, ConceptStatus
@@ -146,41 +147,39 @@ def evaluate_claims(
     if doc.status != ConceptStatus.stable or not doc.frontmatter.claims:
         return []
     findings: list[ClaimFinding] = []
-    for anchor in doc.anchors:
+    for claim in doc.frontmatter.claims:
+        owner, error = resolve_claim_owner(claim, doc.anchors)
+        if owner is None:
+            findings.append(
+                ClaimFinding(
+                    concept=doc.identity,
+                    literal=claim.literal,
+                    anchor_classification=anchor_class,
+                    path=None,
+                )
+            )
+            continue
+        anchor = doc.anchors[owner]
         text = read_pinned(config.root, anchor.path)
         if text is None:
-            for claim in doc.frontmatter.claims:
-                findings.append(
-                    ClaimFinding(
-                        concept=doc.identity,
-                        literal=claim.literal,
-                        anchor_classification=anchor_class,
-                        path=anchor.path,
-                    )
+            findings.append(
+                ClaimFinding(
+                    concept=doc.identity,
+                    literal=claim.literal,
+                    anchor_classification=anchor_class,
+                    path=anchor.path,
                 )
+            )
             continue
         matched = evaluate_file(anchor, config.root, default_scope=config.scope_lines)
-        if not matched.best:
-            region_text = None
-        else:
-            region_text = matched.best.source(text.splitlines())
-        for claim in doc.frontmatter.claims:
-            if region_text is None or not literal_as_token(claim.literal, region_text):
-                findings.append(
-                    ClaimFinding(
-                        concept=doc.identity,
-                        literal=claim.literal,
-                        anchor_classification=anchor_class,
-                        path=anchor.path,
-                    )
+        region_text = matched.best.source(text.splitlines()) if matched.best else None
+        if region_text is None or not literal_as_token(claim.literal, region_text):
+            findings.append(
+                ClaimFinding(
+                    concept=doc.identity,
+                    literal=claim.literal,
+                    anchor_classification=anchor_class,
+                    path=anchor.path,
                 )
-    # one finding per literal
-    seen: set[str] = set()
-    unique: list[ClaimFinding] = []
-    for finding in findings:
-        key = f"{finding.concept}:{finding.literal}"
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(finding)
-    return unique
+            )
+    return findings

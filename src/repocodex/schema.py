@@ -29,6 +29,7 @@ class Claim(BaseModel):
     model_config = ConfigDict(extra="allow")
     literal: str
     subject: str | None = None
+    anchor: int | None = None
 
 
 class Anchor(BaseModel):
