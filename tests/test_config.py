@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from repocodex.config import load_config
+from repocodex.config import DEFAULT_EXCLUSIONS, SKIP_WALK_DIR_NAMES, load_config
 
 
 def test_loads_toml_and_ignore_file(tmp_path: Path):
@@ -31,3 +31,9 @@ def test_defaults_when_files_missing(tmp_path: Path):
     assert cfg.posture == "shadow"
     assert cfg.scope_lines == 40
     assert cfg.distinctiveness_ceiling > 0
+
+
+def test_skip_walk_names_cover_default_exclusion_stems():
+    stems = {glob.replace("/**", "").replace("**/", "").strip("/") for glob in DEFAULT_EXCLUSIONS}
+    assert stems <= SKIP_WALK_DIR_NAMES
+    assert {"venv", "env", "cdk.out", ".kiro"} <= SKIP_WALK_DIR_NAMES

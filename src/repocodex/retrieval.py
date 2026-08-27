@@ -10,20 +10,24 @@ from repocodex.tools.git import run_git
 
 
 def _concept_file(root: Path, identity: str) -> Path | None:
+    fallback = root / ".context" / f"{identity}.md"
+    if fallback.is_file():
+        return fallback
     for ctx in discover_context_roots(root):
         path = ctx / f"{identity}.md"
         if path.is_file():
             return path
-    fallback = root / ".context" / f"{identity}.md"
-    return fallback if fallback.is_file() else None
+    return None
 
 
 def _churn_count(root: Path, identity: str) -> int:
     path = _concept_file(root, identity)
     rel = str(path.relative_to(root)).replace("\\", "/") if path else f".context/{identity}.md"
-    result = run_git(["log", "--follow", "--pretty=%H", "--", rel], cwd=root)
-    commits = [line for line in result.stdout.splitlines() if line.strip()]
-    return len(commits)
+    result = run_git(["rev-list", "--count", "HEAD", "--", rel], cwd=root)
+    try:
+        return int((result.stdout or "0").strip() or "0")
+    except ValueError:
+        return 0
 
 
 def rank_score(doc: ConceptDocument, root: Path) -> float:

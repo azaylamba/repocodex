@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 
+from repocodex.config import SKIP_WALK_DIR_NAMES
 from repocodex.schema import (
     ConceptDocument,
     ConceptStatus,
@@ -21,9 +23,12 @@ SKIP_DIRS = {"repair-tasks"}
 
 def discover_context_roots(repo: Path) -> list[Path]:
     roots: list[Path] = []
-    for path in repo.rglob(".context"):
-        if path.is_dir() and ".git" not in path.parts:
-            roots.append(path)
+    for dirpath, dirnames, _filenames in os.walk(repo, topdown=True, followlinks=False):
+        dirnames[:] = [name for name in dirnames if name not in SKIP_WALK_DIR_NAMES]
+        current = Path(dirpath)
+        if current.name == ".context":
+            roots.append(current)
+            dirnames.clear()
     roots.sort(key=lambda p: (len(p.parts), str(p)))
     return roots
 

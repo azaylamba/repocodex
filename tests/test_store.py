@@ -3,8 +3,30 @@ from __future__ import annotations
 from pathlib import Path
 
 from repocodex.schema import parse_concept
-from repocodex.store.bundle import load_concepts, write_concept
+from repocodex.store.bundle import discover_context_roots, load_concepts, write_concept
 from repocodex.store.reverse_index import expected_index, index_sync_errors, merged_index, parse_index_text, regenerate_all
+
+
+def test_discover_skips_dependency_and_venv_trees(tmp_path: Path):
+    root = tmp_path / "app"
+    real = root / ".context"
+    shard = root / "packages" / "billing" / ".context"
+    decoys = [
+        root / "node_modules" / "pkg" / ".context",
+        root / ".venv" / "lib" / ".context",
+        root / "venv" / "lib" / ".context",
+        root / "env" / "lib" / ".context",
+        root / "cdk.out" / "asset" / ".context",
+        root / "infrastructure" / "cdk.out" / ".context",
+        root / ".kiro" / "steering" / ".context",
+    ]
+    for path in [real, shard, *decoys]:
+        path.mkdir(parents=True)
+
+    found = {path.resolve() for path in discover_context_roots(root)}
+    assert real.resolve() in found
+    assert shard.resolve() in found
+    assert found == {real.resolve(), shard.resolve()}
 
 
 def test_bundle_loads_one_concept_per_file(repo):

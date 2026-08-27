@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from repocodex.engine.code_impact import rank_code_hits
-from repocodex.retrieval import retrieve
+from repocodex.retrieval import _churn_count, retrieve
 from repocodex.schema import ConceptStatus, Source, parse_concept, serialize_concept
+from tests.fixtures.repos import GRACE_CONCEPT, init_git_repo
 
 
 def test_drafts_excluded_from_default_retrieval(repo):
@@ -43,3 +46,28 @@ def test_code_side_hits_are_capped(repo):
         (repo.root / "src" / f"hit_{i}.py").write_text("capturePayment = 1\n", encoding="utf-8")
     ranked = rank_code_hits("src/billing/PaymentGateway.ts", "capturePayment", repo.root, cap=12)
     assert len(ranked) <= 12
+
+
+def test_churn_skips_follow_and_untracked_is_zero(tmp_path: Path, monkeypatch):
+    from repocodex import retrieval
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / ".context" / "invariants").mkdir(parents=True)
+    (root / ".context" / "invariants" / "seed.md").write_text(GRACE_CONCEPT, encoding="utf-8")
+    init_git_repo(root)
+    (root / ".context" / "invariants" / "fresh.md").write_text(GRACE_CONCEPT, encoding="utf-8")
+
+    calls: list[list[str]] = []
+    original = retrieval.run_git
+
+    def spy(args, cwd):
+        calls.append(list(args))
+        return original(args, cwd)
+
+    monkeypatch.setattr(retrieval, "run_git", spy)
+    assert _churn_count(root, "invariants/fresh") == 0
+    assert _churn_count(root, "invariants/seed") >= 1
+    git_args = [tuple(args) for args in calls]
+    assert git_args
+    assert all("--follow" not in args for args in git_args)

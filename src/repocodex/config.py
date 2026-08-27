@@ -17,7 +17,23 @@ DEFAULT_EXCLUSIONS = [
     ".git/**",
     "**/.venv/**",
     "**/__pycache__/**",
+    "**/cdk.out/**",
+    "**/.kiro/**",
+    "**/coverage/**",
+    "**/.next/**",
 ]
+
+
+def _skip_walk_dir_names(exclusions: list[str]) -> frozenset[str]:
+    names = {"venv", "env", ".nuxt", ".tox", ".mypy_cache", ".pytest_cache", ".cache", ".turbo"}
+    for glob in exclusions:
+        stem = glob.replace("/**", "").replace("**/", "").strip("/")
+        if stem and "*" not in stem and "/" not in stem:
+            names.add(stem)
+    return frozenset(names)
+
+
+SKIP_WALK_DIR_NAMES = _skip_walk_dir_names(DEFAULT_EXCLUSIONS)
 
 
 class EngineVersionMismatch(Exception):
