@@ -2,7 +2,7 @@
 
 Mechanical floor for an application repo: CLI, pin, hook, required CI. What the check means: [how-it-works.md](how-it-works.md).
 
-Requires Python 3.14+ and [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) on `PATH`.
+Requires Python 3.11+ and [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) on `PATH`.
 
 ## CLI
 

@@ -4,7 +4,7 @@ This repository is the **engine**: the CLI, attester, store, and packaging. Appl
 
 ## Setup
 
-Python 3.14+ and [ripgrep](https://github.com/BurntSushi/ripgrep) on `PATH`.
+Python 3.11+ and [ripgrep](https://github.com/BurntSushi/ripgrep) on `PATH`.
 
 ```bash
 pip install -e ".[dev]"
