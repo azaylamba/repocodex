@@ -33,6 +33,19 @@ This writes:
 - coding and review skills under `.cursor/skills/` and `.claude/skills/`
 - `.repocodex.toml` if it does not already exist
 
+## Optional MCP
+
+For hosts that speak MCP over stdio (Cursor and similar), install the extra and register the server. This is not required for CLI, hook, or the pin-check Action. Start the host process at the repository root so tools see the same cwd as the CLI.
+
+```bash
+pip install "repocodex[mcp] @ git+https://github.com/azaylamba/repocodex.git@v0.0.1"
+# or from a local clone:
+pip install -e ".[mcp]"
+repocodex install --mcp
+```
+
+That merges the packaged stdio config into `.cursor/mcp.json`. `repocodex mcp` starts the server. Without the extra, `--mcp` does not write that config.
+
 ## Engine pin
 
 `.repocodex.toml` pins the engine:

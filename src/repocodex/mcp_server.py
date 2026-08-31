@@ -60,14 +60,18 @@ def tool_reconcile_memory(markdown: str, identity: str | None = None) -> dict:
     return result
 
 
-def run_mcp() -> None:
+MCP_EXTRA_HINT = "Optional extra 'mcp' is not installed. pip install 'repocodex[mcp]'"
+
+
+def mcp_extra_available() -> bool:
     try:
-        from mcp.server.mcpserver import MCPServer
-    except ImportError as exc:
-        raise SystemExit("MCP is not available in this release.") from exc
+        from mcp.server import MCPServer  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
-    server = MCPServer("repocodex")
 
+def register_mcp_tools(server) -> None:
     @server.tool()
     def get_context(paths: list[str]) -> dict:
         return tool_get_context(paths)
@@ -81,7 +85,7 @@ def run_mcp() -> None:
         return tool_read_concept(identity)
 
     @server.tool()
-    def write_memory_tool(markdown: str, identity: str | None = None) -> dict:
+    def write_memory(markdown: str, identity: str | None = None) -> dict:
         return tool_write_memory(markdown, identity)
 
     @server.tool()
@@ -89,7 +93,15 @@ def run_mcp() -> None:
         return tool_validate_diff(base, staged)
 
     @server.tool()
-    def reconcile_memory_tool(markdown: str, identity: str | None = None) -> dict:
+    def reconcile_memory(markdown: str, identity: str | None = None) -> dict:
         return tool_reconcile_memory(markdown, identity)
 
+
+def run_mcp() -> None:
+    if not mcp_extra_available():
+        raise SystemExit(MCP_EXTRA_HINT)
+    from mcp.server import MCPServer
+
+    server = MCPServer("repocodex")
+    register_mcp_tools(server)
     server.run()

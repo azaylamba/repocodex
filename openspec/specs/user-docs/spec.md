@@ -120,3 +120,21 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **WHEN** a maintainer follows it in an application repo
 - **THEN** they can install, pin the engine, and enable hook plus required CI
 - **AND** they are linked to `docs/how-it-works.md` for what the check means
+
+### Requirement: Install docs include optional MCP extra
+
+`docs/install.md` SHALL document installing the optional `mcp` extra (`pip install 'repocodex[mcp]'` or `pip install -e '.[mcp]'`) and then `repocodex install --mcp` as a working setup step for hosts that speak MCP over stdio. That step SHALL remain optional. The README SHALL remain the front door and SHALL NOT require MCP to complete the first install.
+
+#### Scenario: Maintainer can wire MCP from install.md
+
+- **GIVEN** `docs/install.md`
+- **WHEN** a maintainer wants Cursor (or another stdio host) to call RepoCodex tools
+- **THEN** they are instructed to install the `mcp` extra and run `repocodex install --mcp`
+- **AND** they can still complete CLI, hook, and Action setup without that step
+
+#### Scenario: README stays the front door
+
+- **GIVEN** the project README
+- **WHEN** a first-time reader follows the install snippet
+- **THEN** they can install from git or a clone and run `repocodex install`, `context`, and `validate --diff`
+- **AND** they are not required to install MCP to finish that path

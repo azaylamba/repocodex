@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import shutil
 import stat
 
 from repocodex import ENGINE_VERSION
+from repocodex.mcp_server import MCP_EXTRA_HINT, mcp_extra_available
 from repocodex.schema import envelope
 
 
@@ -31,6 +33,7 @@ def install(
     installed: list[str] = []
     failed: list[str] = []
     skipped: list[str] = []
+    mcp_ok = False
 
     hook_src = _data_path("hooks", "pre-commit")
     hook_dest = repo / ".git" / "hooks" / "pre-commit"
@@ -88,8 +91,25 @@ def install(
             failed.append("plugin (missing from distribution)")
 
     if mcp:
-        # run_mcp cannot start in this release; do not copy mcp.json or claim a working surface.
-        skipped.append("mcp (not available in this release)")
+        if not mcp_extra_available():
+            failed.append(MCP_EXTRA_HINT)
+        else:
+            mcp_src = _data_path("plugin", "mcp.json")
+            cursor_mcp = repo / ".cursor" / "mcp.json"
+            if not mcp_src.exists():
+                failed.append("plugin/mcp.json (missing from distribution)")
+            else:
+                if cursor_mcp.exists():
+                    existing = json.loads(cursor_mcp.read_text(encoding="utf-8"))
+                else:
+                    existing = {}
+                incoming = json.loads(mcp_src.read_text(encoding="utf-8"))
+                servers = existing.setdefault("mcpServers", {})
+                servers.update(incoming.get("mcpServers", incoming))
+                cursor_mcp.parent.mkdir(parents=True, exist_ok=True)
+                cursor_mcp.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
+                installed.append(str(cursor_mcp.relative_to(repo)))
+                mcp_ok = True
 
     config = repo / ".repocodex.toml"
     if not config.exists():
@@ -114,6 +134,6 @@ def install(
             "failed": failed,
             "skipped": skipped,
             "ok": not failed,
-            "mcp": False,
+            "mcp": mcp_ok,
         }
     )

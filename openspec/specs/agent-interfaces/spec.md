@@ -44,13 +44,48 @@ The system SHALL ship a review-agent skill that runs the impact recipe on every 
 
 ### Requirement: Optional MCP wrapper
 
-The system SHALL provide an optional MCP server exposing `get_context`, `get_impact`, `read_concept`, `write_memory`, `validate_diff`, and `reconcile_memory` as thin wrappers over the corresponding CLI commands, with identical verdicts.
+The system SHALL provide an optional MCP server exposing `get_context`, `get_impact`, `read_concept`, `write_memory`, `validate_diff`, and `reconcile_memory` as thin wrappers over the corresponding CLI commands, with identical verdicts. When the optional `mcp` extra is installed, `repocodex mcp` SHALL start that server over stdio using the official Python MCP SDK. When the extra is not installed, `repocodex mcp` SHALL exit with an explicit instruction to install `repocodex[mcp]` and SHALL NOT claim the server is unavailable for any other reason. A skills-only client SHALL still work. MCP SHALL NOT replace the hook or pin-check Action as enforcement.
 
 #### Scenario: MCP and CLI agree
 
-- **GIVEN** the same diff
+- **GIVEN** a build in which the MCP extra is installed
+- **AND** the same diff
 - **WHEN** validation runs via the MCP tool and via the CLI
 - **THEN** the verdicts are identical, including `engine_version`
+
+#### Scenario: Stdio server starts with the extra
+
+- **GIVEN** a build with the `mcp` extra installed
+- **WHEN** `repocodex mcp` runs
+- **THEN** an MCP server listens on stdio
+- **AND** it registers `get_context`, `get_impact`, `read_concept`, `write_memory`, `validate_diff`, and `reconcile_memory`
+
+#### Scenario: Missing extra fails explicitly
+
+- **GIVEN** a build without the `mcp` extra
+- **WHEN** `repocodex mcp` runs
+- **THEN** the process exits non-zero
+- **AND** the message tells the caller to install `repocodex[mcp]`
+
+### Requirement: install --mcp registers only a startable server
+
+`repocodex install --mcp` SHALL merge the packaged MCP config into `.cursor/mcp.json` only when the `mcp` extra is importable. If the extra is missing, it SHALL NOT copy `mcp.json`, SHALL NOT list MCP as an installed working surface, and SHALL NOT set `ok` true solely because a config file was written.
+
+#### Scenario: Extra present registers Cursor config
+
+- **GIVEN** a repository and a build whose `mcp` extra imports
+- **WHEN** `repocodex install --mcp` runs
+- **THEN** `.cursor/mcp.json` contains the RepoCodex stdio server
+- **AND** the payload lists MCP as installed
+- **AND** `ok` is true if no other surfaces failed
+
+#### Scenario: Extra missing does not copy mcp.json
+
+- **GIVEN** a repository and a build whose `mcp` extra does not import
+- **WHEN** `repocodex install --mcp` runs
+- **THEN** `.cursor/mcp.json` is not created by this command
+- **AND** MCP is not listed as an installed working surface
+- **AND** `ok` is not true solely because an `mcp.json` was copied
 
 ### Requirement: Portable distribution
 
