@@ -16,7 +16,7 @@ def test_agent_loop_context_edit_validate_commit(repo):
         encoding="utf-8",
     )
     verdict = json.loads(run_cli(["validate", "--diff"], cwd=repo.root).stdout)
-    assert verdict["engine_version"] == "1.0.0"
+    assert verdict["engine_version"] == "0.0.1"
     repair = json.loads(run_cli(["repair"], cwd=repo.root).stdout)
     assert "engine_version" in repair
     subprocess.run(["git", "add", "-A"], cwd=repo.root, check=True, capture_output=True)

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import shutil
 import stat
 
+from repocodex import ENGINE_VERSION
 from repocodex.schema import envelope
 
 
@@ -30,6 +30,7 @@ def install(
 ) -> dict:
     installed: list[str] = []
     failed: list[str] = []
+    skipped: list[str] = []
 
     hook_src = _data_path("hooks", "pre-commit")
     hook_dest = repo / ".git" / "hooks" / "pre-commit"
@@ -87,26 +88,13 @@ def install(
             failed.append("plugin (missing from distribution)")
 
     if mcp:
-        mcp_src = _data_path("plugin", "mcp.json")
-        cursor_mcp = repo / ".cursor" / "mcp.json"
-        if not mcp_src.exists():
-            failed.append("plugin/mcp.json (missing from distribution)")
-        else:
-            if cursor_mcp.exists():
-                existing = json.loads(cursor_mcp.read_text(encoding="utf-8"))
-            else:
-                existing = {}
-            incoming = json.loads(mcp_src.read_text(encoding="utf-8"))
-            servers = existing.setdefault("mcpServers", {})
-            servers.update(incoming.get("mcpServers", incoming))
-            cursor_mcp.parent.mkdir(parents=True, exist_ok=True)
-            cursor_mcp.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
-            installed.append(str(cursor_mcp.relative_to(repo)))
+        # run_mcp cannot start in this release; do not copy mcp.json or claim a working surface.
+        skipped.append("mcp (not available in this release)")
 
     config = repo / ".repocodex.toml"
     if not config.exists():
         config.write_text(
-            'engine_version = "1.0.0"\nposture = "shadow"\nscope_lines = 40\n',
+            f'engine_version = "{ENGINE_VERSION}"\nposture = "shadow"\nscope_lines = 40\n',
             encoding="utf-8",
         )
         installed.append(".repocodex.toml")
@@ -120,4 +108,12 @@ def install(
     else:
         gitignore.write_text(f"{ignore_line}\n", encoding="utf-8")
 
-    return envelope({"installed": installed, "failed": failed, "ok": not failed, "mcp": mcp})
+    return envelope(
+        {
+            "installed": installed,
+            "failed": failed,
+            "skipped": skipped,
+            "ok": not failed,
+            "mcp": False,
+        }
+    )

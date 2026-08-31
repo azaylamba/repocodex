@@ -8,7 +8,7 @@ RepoCodex stores that why in an [OKF](https://github.com/GoogleCloudPlatform/ope
 
 A change to a pinned file is one turn:
 
-1. **Retrieve why.** `repocodex context <paths>` (or the equivalent skill/MCP call). Read the returned concept bodies.
+1. **Retrieve why.** `repocodex context <paths>` (or the equivalent skill). Read the returned concept bodies.
 2. **Read the pinned code.** Follow the anchors. Related pages come back as titles; open a body only if the edit might touch that scenario.
 3. **Edit.** Keep the recorded why intact unless you intend a why-change.
 4. **Update why** in the same change if intent changed (`repocodex write`, with `supersedes` + `rationale` on a why-change).

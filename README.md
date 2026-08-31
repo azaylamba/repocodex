@@ -4,8 +4,11 @@ RepoCodex stores *why* next to the code, in git, as an OKF v0.2 bundle. Agents r
 
 Git-native why next to code; pin check, not a test suite.
 
+Experimental `0.0.1`. Created by [Ajay Lamba](https://github.com/azaylamba/repocodex).
+
 ```bash
-pip install repocodex
+pip install "git+https://github.com/azaylamba/repocodex.git@v0.0.1"
+# or from a local clone: pip install -e .
 repocodex install
 repocodex context src/billing/PaymentGateway.ts
 repocodex validate --diff

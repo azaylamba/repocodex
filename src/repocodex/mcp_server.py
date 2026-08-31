@@ -64,7 +64,7 @@ def run_mcp() -> None:
     try:
         from mcp.server.mcpserver import MCPServer
     except ImportError as exc:
-        raise SystemExit("Optional extra 'mcp' is not installed. pip install 'repocodex[mcp]'") from exc
+        raise SystemExit("MCP is not available in this release.") from exc
 
     server = MCPServer("repocodex")
 

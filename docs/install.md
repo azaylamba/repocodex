@@ -6,8 +6,16 @@ Requires Python 3.11+ and [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`
 
 ## CLI
 
+The first public release is experimental `0.0.1`. Install from the git tag (there is no PyPI package yet):
+
 ```bash
-pip install repocodex
+pip install "git+https://github.com/azaylamba/repocodex.git@v0.0.1"
+```
+
+From a local clone:
+
+```bash
+pip install -e .
 ```
 
 ## Wire the repo
@@ -25,20 +33,18 @@ This writes:
 - coding and review skills under `.cursor/skills/` and `.claude/skills/`
 - `.repocodex.toml` if it does not already exist
 
-Optional MCP registration: `repocodex install --mcp`.
-
 ## Engine pin
 
 `.repocodex.toml` pins the engine:
 
 ```toml
-engine_version = "1.0.0"
+engine_version = "0.0.1"
 posture = "shadow"
 ```
 
 Hook, local CLI, and CI resolve that pin so verdicts agree. A running engine that does not match `engine_version` refuses to run.
 
-Keep the pin in the same commit as the workflow. The Action installs `repocodex==` that version.
+Keep the pin in the same commit as the workflow. The Action installs from `git+https://github.com/azaylamba/repocodex.git@v<engine_version>` (tag `v0.0.1` when the pin is `0.0.1`).
 
 Default `posture` is `shadow` (report, do not block). Promote to `ratchet` or `full` when you want the hook and required check to deny.
 

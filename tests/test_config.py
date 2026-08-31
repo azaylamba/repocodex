@@ -7,7 +7,7 @@ from repocodex.config import DEFAULT_EXCLUSIONS, SKIP_WALK_DIR_NAMES, load_confi
 
 def test_loads_toml_and_ignore_file(tmp_path: Path):
     (tmp_path / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\n'
+        'engine_version = "0.0.1"\n'
         'posture = "shadow"\n'
         "distinctiveness_ceiling = 12\n"
         "scope_lines = 25\n"
@@ -16,7 +16,7 @@ def test_loads_toml_and_ignore_file(tmp_path: Path):
     )
     (tmp_path / ".repocodexignore").write_text("generated/**\n*.min.js\n", encoding="utf-8")
     cfg = load_config(tmp_path)
-    assert cfg.engine_version == "1.0.0"
+    assert cfg.engine_version == "0.0.1"
     assert cfg.posture == "shadow"
     assert cfg.distinctiveness_ceiling == 12
     assert cfg.scope_lines == 25
@@ -27,7 +27,7 @@ def test_loads_toml_and_ignore_file(tmp_path: Path):
 
 def test_defaults_when_files_missing(tmp_path: Path):
     cfg = load_config(tmp_path)
-    assert cfg.engine_version == "1.0.0"
+    assert cfg.engine_version == "0.0.1"
     assert cfg.posture == "shadow"
     assert cfg.scope_lines == 40
     assert cfg.distinctiveness_ceiling > 0

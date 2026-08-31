@@ -11,7 +11,7 @@ def test_validate_json_engine_version(repo):
     result = run_cli(["validate", "--diff"], cwd=repo.root)
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["engine_version"] == "1.0.0"
+    assert payload["engine_version"] == "0.0.1"
 
 
 def test_context_staged_retrieval(repo):
@@ -59,6 +59,9 @@ def test_repair_install_bootstrap_audit(repo):
     assert any("pre-commit" in item for item in installed["installed"])
     assert any("repocodex.yml" in item for item in installed["installed"])
     assert (repo.root / ".cursor" / "skills" / "repocodex-coding" / "SKILL.md").exists()
+    action = (repo.root / ".github" / "workflows" / "repocodex.yml").read_text(encoding="utf-8")
+    assert "git+https://github.com/azaylamba/repocodex.git@v${PIN}" in action
+    assert 'pip install "repocodex==' not in action
     boot = json.loads(run_cli(["bootstrap"], cwd=repo.root).stdout)
     assert boot.get("status") == "draft"
     audit = json.loads(run_cli(["audit", "--sample-size", "2"], cwd=repo.root).stdout)

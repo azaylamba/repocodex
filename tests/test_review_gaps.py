@@ -178,7 +178,7 @@ def test_missing_subject_stays_silent(repo):
 
 def test_shadow_reports_skipped_memory_without_blocking(repo):
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\nposture = "shadow"\n',
+        'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
     )
     _append_outside_region(repo.streamer, "def refund_batches():\n    return []\n")
@@ -189,7 +189,7 @@ def test_shadow_reports_skipped_memory_without_blocking(repo):
 
 def test_shadow_reports_claim_breakage_without_blocking(repo):
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\nposture = "shadow"\n',
+        'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
     )
     repo.payment_gateway.write_text(
@@ -222,7 +222,7 @@ def test_engine_pin_mismatch_fails_loudly(repo):
     payload = json.loads(result.stdout)
     assert payload["error"] == "engine_version_mismatch"
     assert payload["pinned"] == "9.9.9"
-    assert payload["running"] == "1.0.0"
+    assert payload["running"] == "0.0.1"
     assert "result" not in payload
 
 
@@ -339,8 +339,21 @@ def test_action_has_no_unpinned_fallback():
 
     text = _data_path("action", "repocodex.yml").read_text(encoding="utf-8")
     assert "|| pip install" not in text
-    assert 'pip install "repocodex==${PIN}"' in text
+    assert 'pip install "git+https://github.com/azaylamba/repocodex.git@v${PIN}"' in text
+    assert 'pip install "repocodex==' not in text
     assert "repocodex advisory" in text
+
+
+def test_engine_ci_does_not_require_context_bundle():
+    from pathlib import Path
+
+    workflow = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "engine-tests.yml"
+    text = workflow.read_text(encoding="utf-8")
+    assert "pytest" in text
+    assert 'python-version: "3.11"' in text
+    assert "ripgrep" in text
+    assert 'pip install -e ".[dev]"' in text
+    assert "repocodex validate" not in text
 
 
 def test_staged_rename_reanchors(repo):

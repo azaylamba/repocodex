@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from repocodex.mcp_server import tool_validate_diff, tool_get_context
 from repocodex.commands.validate import validate
 
@@ -22,3 +24,15 @@ def test_plugin_packaging_exists():
     assert _data_path("skills", "repocodex-coding", "SKILL.md").exists()
     assert _data_path("plugin", "hooks", "cursor-pre-commit").exists()
     assert _data_path("plugin", "hooks", "claude-pre-commit").exists()
+
+
+def test_install_mcp_does_not_claim_working_server(tmp_path: Path):
+    from repocodex.commands.install import install
+
+    payload = install(tmp_path, mcp=True)
+    cursor_mcp = tmp_path / ".cursor" / "mcp.json"
+    assert not cursor_mcp.exists()
+    assert not any("mcp.json" in item for item in payload["installed"])
+    assert payload.get("mcp") is not True
+    assert payload["ok"] is not True or "mcp.json" not in "".join(payload["installed"])
+    assert any("not available" in item.lower() for item in payload.get("failed", []) + payload.get("skipped", []))

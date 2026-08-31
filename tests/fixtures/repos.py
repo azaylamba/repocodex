@@ -151,7 +151,7 @@ okf_version: "0.2"
 '''
 
 DEFAULT_CONFIG = '''\
-engine_version = "1.0.0"
+engine_version = "0.0.1"
 posture = "ratchet"
 distinctiveness_ceiling = 200
 scope_lines = 40

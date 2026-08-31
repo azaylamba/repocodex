@@ -237,7 +237,7 @@ def _break_grace_claim(repo) -> None:
 
 def test_shadow_claim_broken_carries_reasons_without_blocking(repo):
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\nposture = "shadow"\n',
+        'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
     )
     _break_grace_claim(repo)
@@ -250,7 +250,7 @@ def test_shadow_and_ratchet_agree_on_blocking_reasons(repo):
     _break_grace_claim(repo)
     ratchet = validate(repo.root)
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\nposture = "shadow"\n',
+        'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
     )
     shadow = validate(repo.root)
@@ -265,7 +265,7 @@ def test_shadow_metric_rejection_reasons_match_verdict(repo):
     import json
 
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\nposture = "shadow"\n',
+        'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
     )
     _break_grace_claim(repo)

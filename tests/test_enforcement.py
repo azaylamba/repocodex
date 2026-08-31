@@ -12,7 +12,7 @@ from tests.fixtures.repos import init_git_repo
 
 def test_brownfield_uncovered_passes_ratchet(uncovered_repo: Path):
     (uncovered_repo / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\nposture = "ratchet"\n',
+        'engine_version = "0.0.1"\nposture = "ratchet"\n',
         encoding="utf-8",
     )
     (uncovered_repo / "src" / "app.py").write_text("def main():\n    return 2\n", encoding="utf-8")
@@ -76,3 +76,15 @@ def test_install_hook_is_executable(repo):
     text = hook.read_text(encoding="utf-8")
     assert "validate" in text
     assert "git commit" in text or "Filters" in text or "filters" in text.lower()
+
+
+def test_install_writes_default_pin_and_git_action(tmp_path: Path):
+    (tmp_path / "README.md").write_text("sample\n", encoding="utf-8")
+    init_git_repo(tmp_path)
+    payload = install(tmp_path)
+    assert payload["ok"] is True
+    pin = (tmp_path / ".repocodex.toml").read_text(encoding="utf-8")
+    assert 'engine_version = "0.0.1"' in pin
+    action = (tmp_path / ".github" / "workflows" / "repocodex.yml").read_text(encoding="utf-8")
+    assert "git+https://github.com/azaylamba/repocodex.git@v${PIN}" in action
+    assert 'pip install "repocodex==' not in action

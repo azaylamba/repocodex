@@ -4,17 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repocodex"
-version = "1.0.0"
+version = "0.0.1"
 description = "Repository-native executable memory for coding agents"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
-authors = [{ name = "RepoCodex" }]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ajay Lamba" }]
 dependencies = [
     "typer>=0.27.1",
     "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/azaylamba/repocodex"
+Source = "https://github.com/azaylamba/repocodex"
+Issues = "https://github.com/azaylamba/repocodex/issues"
 
 [project.optional-dependencies]
 dev = [

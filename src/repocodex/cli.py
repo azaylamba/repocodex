@@ -125,9 +125,9 @@ def repair_command() -> None:
 
 @app.command("install")
 def install_command(
-    mcp: bool = typer.Option(False, "--mcp", help="Register optional MCP wrapper"),
+    mcp: bool = typer.Option(False, "--mcp", help="MCP is not available in this release"),
 ) -> None:
-    """Install pre-commit hook, GitHub Action, skills, and optional MCP."""
+    """Install pre-commit hook, GitHub Action, and skills."""
     payload = _guarded(lambda: run_install(_repo(), mcp=mcp))
     _emit(payload, 0 if payload.get("ok", True) else 1)
 

@@ -1,6 +1,6 @@
 # Contributing to RepoCodex
 
-This repository is the **engine**: the CLI, attester, store, and packaging. Application-repo usage (installing the CLI into another project, running the agent loop) is documented in [README.md](README.md) and [docs/](docs/how-it-works.md). Do not treat this file as that guide.
+This repository is the **engine**: the CLI, attester, store, and packaging, at [github.com/azaylamba/repocodex](https://github.com/azaylamba/repocodex). Application-repo usage (installing the CLI into another project, running the agent loop) is documented in [README.md](README.md) and [docs/](docs/how-it-works.md). Do not treat this file as that guide.
 
 ## Setup
 
@@ -12,7 +12,7 @@ pip install -e ".[dev]"
 
 ## Tests
 
-Engine-package tests pin the CLI and the attester. They are not how application scenarios are verified.
+Engine-package tests pin the CLI and the attester. They are not how application scenarios are verified. GitHub Actions on this repository runs the same suite on pull requests and on push to `main` (Python 3.11, ripgrep, `pip install -e ".[dev]"`, pytest).
 
 ```bash
 pytest

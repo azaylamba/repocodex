@@ -14,7 +14,7 @@ def test_validate_live_on_formatting(repo):
     payload = validate(repo.root, all_concepts=False)
     classes = {item["classification"] for item in payload["outcomes"] if "enterprise" in item["concept"]}
     assert "LIVE" in classes
-    assert payload["engine_version"] == "1.0.0"
+    assert payload["engine_version"] == "0.0.1"
     assert "impacted_scenarios" in payload
 
 
@@ -74,7 +74,7 @@ def test_dilution_warning_on_unrelated_pr(repo):
 
 def test_shadow_posture_never_blocks(repo):
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "1.0.0"\nposture = "shadow"\n',
+        'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
     )
     repo.streamer.write_text("class X:\n    pass\n", encoding="utf-8")
