@@ -9,7 +9,7 @@ Constraints: CLI remains canonical; consuming-repo CI is `validate --diff --chec
 **Goals:**
 
 - A visitor who clones or `pip install`s from git can run the CLI, hook, and pin-check Action without PyPI.
-- GitHub detects an MIT license; package metadata names Ajay Kumar and points at this repo.
+- GitHub detects an MIT license; package metadata names Ajay Lamba and points at this repo.
 - Engine `main` has pytest CI once the repo is public.
 - Docs and install do not claim MCP or `pip install repocodex` from PyPI.
 - Version and pin are `0.0.1` so the first tag is honest.
@@ -62,8 +62,8 @@ Leave the tool-function module in the tree. First public release:
 
 ### 5. Attribution lives in metadata and the README byline, not a new namespace
 
-- `project.authors`: Ajay Kumar; `project.urls`: Homepage/Source/Issues → `https://github.com/azaylamba/repocodex`.
-- README: one-line author (“Created by Ajay Kumar”) plus the GitHub user link. Keep README short (existing user-docs rule).
+- `project.authors`: Ajay Lamba; `project.urls`: Homepage/Source/Issues → `https://github.com/azaylamba/repocodex`.
+- README: one-line author (“Created by Ajay Lamba”) plus the GitHub user link. Keep README short (existing user-docs rule).
 - `SECURITY.md`: report vulnerabilities via GitHub issues (or private vulnerability reporting once the repo is public). Do not require a personal email in-tree.
 - GitHub home stays `azaylamba/repocodex`. Pinning the public repo on the profile is a manual owner task, not code.
 

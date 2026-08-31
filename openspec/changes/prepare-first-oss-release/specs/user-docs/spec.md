@@ -20,12 +20,12 @@
 
 ### Requirement: README names the author without becoming a bio
 
-`README.md` SHALL include a short author byline that names Ajay Kumar and links the GitHub user or this repository, while remaining the front door (purpose, benefit, install, three commands, links to `docs/`). It SHALL NOT add a long personal bio or duplicate architecture.
+`README.md` SHALL include a short author byline that names Ajay Lamba and links the GitHub user or this repository, while remaining the front door (purpose, benefit, install, three commands, links to `docs/`). It SHALL NOT add a long personal bio or duplicate architecture.
 
 #### Scenario: Byline is present and README stays short
 
 - **GIVEN** the project README
 - **WHEN** a first-time reader opens it
-- **THEN** they can see that Ajay Kumar created the project
+- **THEN** they can see that Ajay Lamba created the project
 - **AND** they can still state purpose and benefit in one sentence
 - **AND** they are still pointed at named docs for how it works, memory, agents, and install

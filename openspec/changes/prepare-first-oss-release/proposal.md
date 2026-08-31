@@ -1,6 +1,6 @@
 ## Why
 
-The engine is a private repo under `azaylamba` whose README, Action, and package metadata describe a finished 1.0 others `pip install`. That first run is false, the license is not a file, MCP does not start, and authorship is the placeholder “RepoCodex”. Opening the source without fixing those items would publish a broken install and hide that Ajay Kumar built it. This change is the must-have floor for a first public release as a personal achievement on that existing GitHub user — not a 1.0 product launch and not a new account or organization.
+The engine is a private repo under `azaylamba` whose README, Action, and package metadata describe a finished 1.0 others `pip install`. That first run is false, the license is not a file, MCP does not start, and authorship is the placeholder “RepoCodex”. Opening the source without fixing those items would publish a broken install and hide that Ajay Lamba built it. This change is the must-have floor for a first public release as a personal achievement on that existing GitHub user — not a 1.0 product launch and not a new account or organization.
 
 ## What Changes
 
@@ -9,7 +9,7 @@ The engine is a private repo under `azaylamba` whose README, Action, and package
 - Make install instructions and the shipped GitHub Action succeed **without PyPI**: install from the public git tag/ref that matches `engine_version`.
 - Add engine-repo CI (pytest + ripgrep) so `main` is checkable once public.
 - Stop advertising MCP as a working extra until a server actually starts; `install --mcp` must not claim success for a non-starting server.
-- Attribute the project to **Ajay Kumar** (`azaylamba`) in package metadata, README, and security contact. Primary contact is GitHub issues on `azaylamba/repocodex`.
+- Attribute the project to **Ajay Lamba** (`azaylamba`) in package metadata, README, and security contact. Primary contact is GitHub issues on `azaylamba/repocodex`.
 - Add `SECURITY.md` and enough `CONTRIBUTING` / README byline that a visitor can see who built it and how to report issues.
 - Keep the GitHub home as the existing personal repo (`azaylamba/repocodex`). Do not create a second user or an org as part of this change.
 

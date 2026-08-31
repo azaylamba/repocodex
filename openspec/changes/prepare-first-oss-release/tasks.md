@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Add root `LICENSE` (MIT) and declare MIT plus `license-files` in `pyproject.toml` so the sdist includes the file
 - [ ] 1.2 Set version `0.0.1` in `pyproject.toml`, `ENGINE_VERSION`, install’s default `.repocodex.toml`, and the Action fallback pin
-- [ ] 1.3 Set `project.authors` to Ajay Kumar (no placeholder `RepoCodex`) and `project.urls` Homepage, Source, and Issues to `https://github.com/azaylamba/repocodex`
+- [ ] 1.3 Set `project.authors` to Ajay Lamba (no placeholder `RepoCodex`) and `project.urls` Homepage, Source, and Issues to `https://github.com/azaylamba/repocodex`
 - [ ] 1.4 Update tests and fixtures that assert `engine_version == "1.0.0"` to `0.0.1`
 
 ## 2. Git-based install and consuming CI
@@ -18,7 +18,7 @@
 
 ## 4. User docs
 
-- [ ] 4.1 Rewrite README install to git tag or local editable clone; add experimental `0.0.1`; add a short Ajay Kumar byline linking `azaylamba/repocodex`; keep README the front door only
+- [ ] 4.1 Rewrite README install to git tag or local editable clone; add experimental `0.0.1`; add a short Ajay Lamba byline linking `azaylamba/repocodex`; keep README the front door only
 - [ ] 4.2 Update `docs/install.md` to the same git-tag install and Action behavior; omit MCP as a working step
 - [ ] 4.3 Point `CONTRIBUTING.md` at this GitHub repo and engine pytest CI
 
@@ -40,4 +40,4 @@
 - [ ] 7.2 Set `azaylamba/repocodex` to public
 - [ ] 7.3 Create and push git tag `v0.0.1` on the release commit; verify `pip install git+https://github.com/azaylamba/repocodex.git@v0.0.1` works unauthenticated
 - [ ] 7.4 Pin `repocodex` on the `azaylamba` GitHub profile
-- [ ] 7.5 Confirm the public README byline, Issues link, and contributor identity show Ajay Kumar / `azaylamba`
+- [ ] 7.5 Confirm the public README byline, Issues link, and contributor identity show Ajay Lamba / `azaylamba`

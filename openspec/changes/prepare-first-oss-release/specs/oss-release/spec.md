@@ -58,15 +58,15 @@ This repository SHALL have a GitHub Actions workflow that on pull request and on
 - **THEN** they are directed to GitHub on `azaylamba/repocodex`
 - **AND** they are not told to email an unpublished personal address as the only path
 
-### Requirement: Authorship is Ajay Kumar on the personal GitHub user
+### Requirement: Authorship is Ajay Lamba on the personal GitHub user
 
-Package metadata and the README SHALL identify **Ajay Kumar** as the author and SHALL link `https://github.com/azaylamba/repocodex` as Homepage, Source, and Issues. The intended public GitHub home SHALL be that personal repository, not an organization and not a second GitHub username.
+Package metadata and the README SHALL identify **Ajay Lamba** as the author and SHALL link `https://github.com/azaylamba/repocodex` as Homepage, Source, and Issues. The intended public GitHub home SHALL be that personal repository, not an organization and not a second GitHub username.
 
 #### Scenario: A visitor can tell who built it
 
 - **GIVEN** the README and `pyproject.toml`
 - **WHEN** a first-time visitor opens them
-- **THEN** they see the name Ajay Kumar
+- **THEN** they see the name Ajay Lamba
 - **AND** they can follow a link to `github.com/azaylamba/repocodex`
 - **AND** authors is not the placeholder name `RepoCodex`
 
