@@ -10,6 +10,8 @@ Python 3.11+ and [ripgrep](https://github.com/BurntSushi/ripgrep) on `PATH`.
 pip install -e ".[dev]"
 ```
 
+To run `repocodex mcp` locally, also install the optional extra: `pip install -e ".[dev,mcp]"`. Engine tests stub that extra and do not require it for pytest.
+
 ## Tests
 
 Engine-package tests pin the CLI and the attester. They are not how application scenarios are verified. GitHub Actions on this repository runs the same suite on pull requests and on push to `main` (Python 3.11, ripgrep, `pip install -e ".[dev]"`, pytest).

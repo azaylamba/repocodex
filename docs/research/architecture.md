@@ -353,7 +353,7 @@ The **CLI is canonical**; everything else wraps it.
 | `repocodex reconcile <concept>` | coding/review agent | Repair DRIFT with new anchors; must pass the gate. |
 | `repocodex context <paths>` | agents | Reverse-index lookup + staged catalog (machine-readable). |
 | `repocodex repair` | **humans** | One command: invokes a repair agent on the current RECONCILE state. A human's repair action is "run one command," not "author anchors." |
-| `repocodex install` | setup | Pre-commit hook + GitHub Action + skills + optional MCP registration, in one package. |
+| `repocodex install` | setup | Pre-commit hook + GitHub Action + skills. Optional MCP registration is `repocodex install --mcp` when the `mcp` extra is importable. |
 | `repocodex bootstrap` | setup | Mine git history/comments/docs; keep only gate-passing concepts; `status: draft`, short `stale_after`, `sources` required. |
 | `repocodex audit` | scheduled job | Sampling truth audit (§14.2) and distinctiveness re-scoring (§16). |
 

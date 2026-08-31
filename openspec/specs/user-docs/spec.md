@@ -24,6 +24,18 @@ User-facing documentation layout, README scope, and the explanations readers MUS
 - **WHEN** it is compared to `docs/`
 - **THEN** it does not contain the full agent loop, the OKF field catalog, or the research architecture
 
+### Requirement: README names the author without becoming a bio
+
+`README.md` SHALL include a short author byline that names Ajay Lamba and links the GitHub user or this repository, while remaining the front door (purpose, benefit, install, three commands, links to `docs/`). It SHALL NOT add a long personal bio or duplicate architecture.
+
+#### Scenario: Byline is present and README stays short
+
+- **GIVEN** the project README
+- **WHEN** a first-time reader opens it
+- **THEN** they can see that Ajay Lamba created the project
+- **AND** they can still state purpose and benefit in one sentence
+- **AND** they are still pointed at named docs for how it works, memory, agents, and install
+
 ### Requirement: Each documentation file has one job
 
 The documentation tree SHALL use these files and no extra user-facing guides unless a later spec adds them:
@@ -34,7 +46,7 @@ The documentation tree SHALL use these files and no extra user-facing guides unl
 | `docs/how-it-works.md` | Core concepts and the retrieve → read code → edit → update why → pin-check loop |
 | `docs/memory.md` | How to read `.context/` (OKF v0.2): body is why, anchors pin live text, links, reverse index outside the bundle |
 | `docs/agents.md` | How coding agents (and optionally humans) run that loop so a change does not detach why from code |
-| `docs/install.md` | `repocodex install`, `.repocodex.toml` pin, hook, GitHub Action |
+| `docs/install.md` | `repocodex install`, `.repocodex.toml` pin, hook, GitHub Action, optional `mcp` extra |
 | `CONTRIBUTING.md` | How to contribute to the *engine* (tests, OpenSpec), not how to use memory in an application repo |
 | `docs/research/architecture.md` | Canonical design; linked as further reading, not onboarding |
 
@@ -112,7 +124,7 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 
 ### Requirement: Install docs cover the mechanical floor only
 
-`docs/install.md` SHALL cover installing the CLI, `repocodex install` (hook, Action, skills), the `.repocodex.toml` engine pin, and that hook and CI wrap `repocodex validate`. It SHALL NOT explain OKF or the agent loop.
+`docs/install.md` SHALL cover installing the CLI, `repocodex install` (hook, Action, skills), the `.repocodex.toml` engine pin, and that hook and CI wrap `repocodex validate`. Optional MCP belongs in this file as a separate step (`mcp` extra then `repocodex install --mcp`), not as part of the required floor. It SHALL NOT explain OKF or the agent loop.
 
 #### Scenario: Install is enough to get a blocking check
 
@@ -138,3 +150,21 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **WHEN** a first-time reader follows the install snippet
 - **THEN** they can install from git or a clone and run `repocodex install`, `context`, and `validate --diff`
 - **AND** they are not required to install MCP to finish that path
+
+### Requirement: Install docs do not assume PyPI
+
+`README.md` and `docs/install.md` SHALL tell a first-time visitor how to install from the public git tag on `azaylamba/repocodex` (or an equivalent local editable install). They SHALL NOT present `pip install repocodex` from PyPI as the install path until a later change adds a published package. They SHALL state that the first public release is experimental (`0.0.1`).
+
+#### Scenario: README install works without PyPI
+
+- **GIVEN** the project README
+- **WHEN** a first-time reader follows the install snippet
+- **THEN** the commands do not require a PyPI project named `repocodex`
+- **AND** they can reach `repocodex context` / `repocodex validate --diff` after install from git or from a clone
+
+#### Scenario: Install doc matches the shipped Action
+
+- **GIVEN** `docs/install.md`
+- **WHEN** it describes how CI gets the engine
+- **THEN** it describes git-tag install matching `engine_version`
+- **AND** it does not say the Action runs `pip install repocodex==` against PyPI

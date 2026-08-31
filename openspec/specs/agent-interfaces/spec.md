@@ -10,11 +10,12 @@ Expose all engine behavior through a canonical CLI with machine-readable JSON. S
 
 The system SHALL expose all functionality through a CLI — `validate`, `write`, `reconcile`, `context`, `repair`, `install`, `bootstrap`, `audit` — with machine-readable JSON outputs that include `engine_version`. All other surfaces (skills, MCP, hooks, CI) SHALL wrap the CLI rather than reimplement it.
 
-#### Scenario: One install wires everything
+#### Scenario: One install wires the portable floor
 
 - **GIVEN** a repository without RepoCodex
-- **WHEN** `repocodex install` runs
-- **THEN** the pre-commit hook, GitHub Action, agent skills, and optional MCP registration are installed together
+- **WHEN** `repocodex install` runs without `--mcp`
+- **THEN** the pre-commit hook, GitHub Action, and agent skills are installed together
+- **AND** MCP is not registered as a working surface (that requires `--mcp` and the `mcp` extra)
 
 #### Scenario: Bootstrap seeds only attested memory
 
@@ -86,6 +87,17 @@ The system SHALL provide an optional MCP server exposing `get_context`, `get_imp
 - **THEN** `.cursor/mcp.json` is not created by this command
 - **AND** MCP is not listed as an installed working surface
 - **AND** `ok` is not true solely because an `mcp.json` was copied
+
+### Requirement: Shipped Action installs the pinned engine from git
+
+The GitHub Action that `repocodex install` writes SHALL install the engine from `git+https://github.com/azaylamba/repocodex.git@v<engine_version>` (or an equivalent git ref that matches the pin). It SHALL still run `repocodex validate --diff --check` as the required job. It SHALL NOT install by querying PyPI for `repocodex==<pin>` until a later change publishes that package.
+
+#### Scenario: Required job does not hit PyPI
+
+- **GIVEN** a repository where `repocodex install` has written `.github/workflows/repocodex.yml` and `.repocodex.toml` with `engine_version = "0.0.1"`
+- **WHEN** the required check job installs the engine
+- **THEN** the install source is the `v0.0.1` git tag on `azaylamba/repocodex`
+- **AND** the job still invokes `repocodex validate` with `--check`
 
 ### Requirement: Portable distribution
 

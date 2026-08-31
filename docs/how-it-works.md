@@ -26,6 +26,6 @@ The required check (pre-commit hook and the deterministic GitHub Action) attests
 
 - How to read a concept: [memory.md](memory.md)
 - How agents (and optionally humans) run the loop: [agents.md](agents.md)
-- Install, pin, hook, CI: [install.md](install.md)
+- Install, pin, hook, CI, optional MCP: [install.md](install.md)
 
 The canonical engine design is [research/architecture.md](research/architecture.md). You do not need it to understand purpose, benefit, or the loop.

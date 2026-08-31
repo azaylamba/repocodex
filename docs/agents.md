@@ -49,4 +49,4 @@ A human developer may run the same commands. They are optional operators, not a 
 
 The governed exception is `memory-exempt`: a labelled, acknowledged override for hotfixes that cannot wait for a pin repair. It is not the default path. Use `repocodex repair` when a human needs a one-command repair flow.
 
-What the loop is for: [how-it-works.md](how-it-works.md). Install and pin: [install.md](install.md).
+What the loop is for: [how-it-works.md](how-it-works.md). Install, pin, and optional MCP: [install.md](install.md).

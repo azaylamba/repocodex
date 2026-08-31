@@ -1,4 +1,10 @@
-## ADDED Requirements
+# oss-release Specification
+
+## Purpose
+
+Packaging, license, version, engine CI, security contact, git-based install, and personal attribution for the first public release on `azaylamba/repocodex`.
+
+## Requirements
 
 ### Requirement: MIT license is a file in the repository
 
