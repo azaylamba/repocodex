@@ -25,7 +25,7 @@ The system SHALL expose all functionality through a CLI — `validate`, `write`,
 
 ### Requirement: Coding-agent skill
 
-The system SHALL ship a coding-agent skill enforcing the loop: retrieve context before editing, run the impact recipe on the diff, validate before ending the turn, apply REANCHOR patches, and repair DRIFT via `reconcile`/`write` in the same change — with anchor-authoring guidance that prefers stable tokens over renameable identifiers.
+The system SHALL ship a coding-agent skill enforcing the loop: retrieve context before editing, run the impact recipe on the diff, validate before ending the turn, apply REANCHOR patches, repair DRIFT via `reconcile`/`write` in the same change, and write a pinning concept when `result` is `WRITE` or `skipped_memory` is non-empty — with anchor-authoring guidance that prefers stable tokens over renameable identifiers. `LIVE` / `WEAK` SHALL mean proceed only when `skipped_memory` is empty.
 
 #### Scenario: Turn cannot end on unrepaired drift
 
@@ -33,15 +33,28 @@ The system SHALL ship a coding-agent skill enforcing the loop: retrieve context 
 - **WHEN** the agent attempts to finish its turn or commit
 - **THEN** the skill and hook require a gate-passing repair first
 
+#### Scenario: Turn cannot end on WRITE
+
+- **GIVEN** a coding agent whose validate payload has `result` `WRITE` or non-empty `skipped_memory`
+- **WHEN** the agent attempts to finish its turn or commit
+- **THEN** the skill requires a gate-passing `repocodex write` of a concept pinning each listed path, then re-validate
+- **AND** the hook denies the commit while `blocking` is true
+
 ### Requirement: Review-agent skill
 
-The system SHALL ship a review-agent skill that runs the impact recipe on every PR, verifies each new concept's prose against the originating diff, and flags unreconciled drift, skipped recipe steps, why-changes without `supersedes`/`rationale`, weakenings, contradictions, and high churn — posting all findings to the advisory check only.
+The system SHALL ship a review-agent skill that runs the impact recipe on every PR, verifies each new concept's prose against the originating diff, and flags unreconciled drift, skipped recipe steps, why-changes without `supersedes`/`rationale`, weakenings, contradictions, high churn, and uncovered substantive files listed in `skipped_memory` without a pinning concept — posting all findings to the advisory check only.
 
 #### Scenario: New concept verified while diff is in context
 
 - **GIVEN** a PR that adds a new concept alongside code
 - **WHEN** the review agent runs
 - **THEN** it checks the concept's narrative against the diff and flags mismatches as advisory findings
+
+#### Scenario: Missing first-touch concept is advisory
+
+- **GIVEN** a PR whose required check reports `uncovered_file_without_memory`
+- **WHEN** the review agent runs
+- **THEN** it flags the missing pinning concept as an advisory finding
 
 ### Requirement: Optional MCP wrapper
 

@@ -194,7 +194,12 @@ def test_unanchored_page_does_not_arm_skipped_memory(repo):
     uncovered.write_text("print('new')\n", encoding="utf-8")
     payload = validate(repo.root)
     skipped = payload.get("skipped_memory") or []
-    assert not any(item.get("path") == "src/uncovered.py" for item in skipped)
+    assert not any(str(item.get("path", "")).endswith("orphan.md") for item in skipped)
+    assert any(
+        item.get("path") == "src/uncovered.py"
+        and item.get("reason") == "uncovered_file_without_memory"
+        for item in skipped
+    )
 
 
 def test_write_of_unverified_concept_omits_verified(repo):

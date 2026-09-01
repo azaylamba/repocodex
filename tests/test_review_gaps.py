@@ -176,7 +176,7 @@ def test_missing_subject_stays_silent(repo):
     assert not [c for c in payload["contradictions"] if c.get("reason") == "conflicting_claims"]
 
 
-def test_shadow_reports_skipped_memory_without_blocking(repo):
+def test_shadow_reports_skipped_memory_and_blocks(repo):
     (repo.root / ".repocodex.toml").write_text(
         'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
@@ -184,7 +184,7 @@ def test_shadow_reports_skipped_memory_without_blocking(repo):
     _append_outside_region(repo.streamer, "def refund_batches():\n    return []\n")
     payload = validate(repo.root)
     assert payload["skipped_memory"]
-    assert payload["blocking"] is False
+    assert payload["blocking"] is True
 
 
 def test_shadow_reports_claim_breakage_without_blocking(repo):
@@ -325,13 +325,19 @@ def test_claim_breakage_repaired_through_gate(repo):
     assert result["accepted"] is True
 
 
-def test_untracked_scratch_does_not_alter_verdict(repo):
+def test_untracked_scratch_arms_first_touch(repo):
     first = validate(repo.root, all_concepts=True)
+    assert not first["skipped_memory"]
     scratch = repo.root / "scratch_untracked.py"
     scratch.write_text('plan = "ENTERPRISE"\nconst grace = 3\nyield\n', encoding="utf-8")
     second = validate(repo.root, all_concepts=True)
-    assert first["result"] == second["result"]
-    assert first["blocking"] == second["blocking"]
+    assert any(
+        item.get("path") == "scratch_untracked.py"
+        and item.get("reason") == "uncovered_file_without_memory"
+        for item in second["skipped_memory"]
+    )
+    assert second["result"] == "WRITE"
+    assert second["blocking"] is True
 
 
 def test_action_has_no_unpinned_fallback():

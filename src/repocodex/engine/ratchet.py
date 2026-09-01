@@ -4,49 +4,34 @@ import re
 from pathlib import Path
 
 from repocodex.config import RepoConfig
+from repocodex.engine.gate import path_excluded
 from repocodex.engine.match import _merge_regions, evaluate_file
 from repocodex.schema import ConceptDocument
 from repocodex.tools.git import run_git
 
 
-SUBSTANTIVE_PREFIXES = ("+", "-")
 COMMENT_PREFIXES = ("#", "//", "/*", "*", "--", ";", "<!--")
-AGENT_AUTHOR_MARKERS = (
-    "cursoragent@",
-    "noreply@cursor",
-    "claude@",
-    "github-actions[bot]",
-    "copilot@",
-)
-AGENT_TRAILER_KEYS = ("generated-by:", "co-authored-by:")
-AGENT_TRAILER_VALUES = ("agent:", "cursor", "claude", "codex", "copilot")
 HUNK_HEADER_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
-
-SUBSTANTIVE_PREFIXES = ("+", "-")
-COMMENT_PREFIXES = ("#", "//", "/*", "*", "--", ";", "<!--")
-AGENT_AUTHOR_MARKERS = (
-    "cursoragent@",
-    "noreply@cursor",
-    "claude@",
-    "github-actions[bot]",
-    "copilot@",
+FIRST_TOUCH_SKIP_BASENAMES = frozenset(
+    {
+        ".gitignore",
+        ".gitattributes",
+        ".repocodex.toml",
+        ".repocodexignore",
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "npm-shrinkwrap.json",
+        "uv.lock",
+        "Cargo.lock",
+        "poetry.lock",
+        "Pipfile.lock",
+        "composer.lock",
+        "Gemfile.lock",
+        "go.sum",
+    }
 )
-AGENT_TRAILER_KEYS = ("generated-by:", "co-authored-by:")
-AGENT_TRAILER_VALUES = ("agent:", "cursor", "claude", "codex", "copilot")
-
-
-def _is_agent_commit(root: Path) -> bool:
-    author = run_git(["log", "-1", "--pretty=%ae"], cwd=root).stdout.strip().lower()
-    if any(marker in author for marker in AGENT_AUTHOR_MARKERS):
-        return True
-    msg = run_git(["log", "-1", "--pretty=%B"], cwd=root).stdout
-    for line in msg.splitlines():
-        lower = line.strip().lower()
-        if any(lower.startswith(key) for key in AGENT_TRAILER_KEYS):
-            if any(value in lower for value in AGENT_TRAILER_VALUES):
-                return True
-    return False
 
 
 def _is_comment_line(line: str) -> bool:
@@ -54,6 +39,27 @@ def _is_comment_line(line: str) -> bool:
     if not stripped:
         return True
     return any(stripped.startswith(prefix) for prefix in COMMENT_PREFIXES)
+
+
+def _lines_are_substantive(removed: list[str], added: list[str]) -> bool:
+    content = [*removed, *added]
+    if not content:
+        return False
+    if all(not line.strip() for line in content):
+        return False
+    if all(_is_comment_line(line) for line in content):
+        return False
+    if re.findall(r"\S+", "\n".join(removed)) == re.findall(r"\S+", "\n".join(added)):
+        return False
+    return True
+
+
+def _untracked_is_substantive(root: Path, path: str) -> bool:
+    target = root / path
+    if not target.is_file():
+        return False
+    added = target.read_text(encoding="utf-8", errors="replace").splitlines()
+    return _lines_are_substantive([], added)
 
 
 def is_substantive_change(root: Path, path: str, *, staged: bool = False, base: str | None = None) -> bool:
@@ -67,23 +73,15 @@ def is_substantive_change(root: Path, path: str, *, staged: bool = False, base: 
     diff = run_git(args, cwd=root).stdout
     if "Binary files" in diff:
         return True
-    content: list[str] = []
-    for line in diff.splitlines():
-        if line.startswith("+++") or line.startswith("---"):
-            continue
-        if line.startswith(SUBSTANTIVE_PREFIXES):
-            content.append(line[1:])
-    if not content:
-        return False
-    if all(not line.strip() for line in content):
-        return False
-    if all(_is_comment_line(line) for line in content):
-        return False
     removed = [line[1:] for line in diff.splitlines() if line.startswith("-") and not line.startswith("---")]
     added = [line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++")]
-    if re.findall(r"\S+", "\n".join(removed)) == re.findall(r"\S+", "\n".join(added)):
-        return False
-    return True
+    if _lines_are_substantive(removed, added):
+        return True
+    if not staged and not base:
+        in_head = run_git(["cat-file", "-e", f"HEAD:{path}"], cwd=root).returncode == 0
+        if not in_head:
+            return _untracked_is_substantive(root, path)
+    return False
 
 
 def changed_line_ranges(
@@ -186,6 +184,27 @@ def _concept_identities_from_paths(paths: list[str], concepts: list[ConceptDocum
     return changed
 
 
+def _identities_pinning_path(path: str, concepts: list[ConceptDocument]) -> set[str]:
+    normalized = path.replace("\\", "/")
+    found: set[str] = set()
+    for doc in concepts:
+        for pinned in doc.pinned_paths:
+            if pinned.replace("\\", "/") in {path, normalized}:
+                found.add(doc.identity)
+                break
+    return found
+
+
+def _is_memory_path(normalized: str) -> bool:
+    return (
+        normalized.startswith(".context/")
+        or normalized.endswith("reverse-index.md")
+        or "/.context/" in normalized
+        or "/.repocodex/reverse-index/" in f"/{normalized}"
+        or normalized.startswith(".repocodex/reverse-index/")
+    )
+
+
 def skipped_memory(
     changed_files: list[str],
     concepts: list[ConceptDocument],
@@ -196,22 +215,29 @@ def skipped_memory(
     staged: bool = False,
     base: str | None = None,
 ) -> list[dict]:
+    del posture  # first-touch applies in every posture
     covered = {path for path, ids in reverse_index.items() if ids}
     pinning_updated = _concept_identities_from_paths(changed_files, concepts)
     flags: list[dict] = []
     for path in changed_files:
         normalized = path.replace("\\", "/")
-        if normalized.startswith(".context/") or normalized.endswith("reverse-index.md") or "/.context/" in normalized:
+        if _is_memory_path(normalized):
             continue
         has_memory = path in covered or normalized in covered
         if not has_memory:
-            if posture == "full" and _is_agent_commit(config.root):
-                flags.append(
-                    {
-                        "path": path,
-                        "reason": "uncovered_agent_commit",
-                    }
-                )
+            if path_excluded(path, config) or Path(normalized).name in FIRST_TOUCH_SKIP_BASENAMES:
+                continue
+            if not is_substantive_change(config.root, path, staged=staged, base=base):
+                continue
+            pinning = _identities_pinning_path(path, concepts)
+            if pinning & pinning_updated:
+                continue
+            flags.append(
+                {
+                    "path": path,
+                    "reason": "uncovered_file_without_memory",
+                }
+            )
             continue
         if not is_substantive_change(config.root, path, staged=staged, base=base):
             continue

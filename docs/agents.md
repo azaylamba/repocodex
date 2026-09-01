@@ -14,6 +14,8 @@ repocodex context <paths>
 
 Read the returned bodies. Related pages are titles only — open a body only if the edit might touch that scenario. How to read a concept: [memory.md](memory.md).
 
+If context is empty for those paths, the files are uncovered: after a substantive edit you must write a pinning concept in the same change (`repocodex write`). Do not treat `result` `LIVE` as done if `skipped_memory` is populated.
+
 Keep institutional why intact unless you intend a why-change (`supersedes` + `rationale`). Do not clobber a stable concept.
 
 ## Before the turn ends
@@ -24,12 +26,13 @@ repocodex validate --diff
 
 | Outcome | What you do |
 | --- | --- |
-| `LIVE` / `WEAK` | Proceed. WEAK is logged; optionally tighten later. |
+| `LIVE` / `WEAK` | Proceed only if `skipped_memory` is empty. WEAK is logged; optionally tighten later. |
+| `WRITE` / non-empty `skipped_memory` | Unfinished turn. `repocodex write` a gate-passing concept pinning each listed path, then re-validate. Do not finish or commit while `blocking` is true. |
 | `REANCHOR` | Apply the emitted patch (`repocodex reconcile --apply-patch '<json>'`). The engine never mutates the tree. Stage the result. |
 | `RECONCILE` / `DRIFT` | Repair in this change via `repocodex write` / `repocodex reconcile`. Do not finish the turn or commit. |
 | `CLAIM_BROKEN` | The declared literal no longer holds in the pinned region. Update why or restore the code. |
 
-Unrepaired pin breakage is a failed turn. The pre-commit hook denies it.
+Unrepaired pin breakage or undischarged skipped-memory is a failed turn. The pre-commit hook denies it.
 
 ## What to stage
 

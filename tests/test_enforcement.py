@@ -10,14 +10,17 @@ from repocodex.commands.validate import validate
 from tests.fixtures.repos import init_git_repo
 
 
-def test_brownfield_uncovered_passes_ratchet(uncovered_repo: Path):
+def test_brownfield_uncovered_fails_first_touch(uncovered_repo: Path):
     (uncovered_repo / ".repocodex.toml").write_text(
         'engine_version = "0.0.1"\nposture = "ratchet"\n',
         encoding="utf-8",
     )
     (uncovered_repo / "src" / "app.py").write_text("def main():\n    return 2\n", encoding="utf-8")
     payload = validate(uncovered_repo)
-    assert payload["blocking"] is False
+    assert payload["blocking"] is True
+    assert any(
+        item.get("reason") == "uncovered_file_without_memory" for item in payload["skipped_memory"]
+    )
 
 
 def test_covered_file_without_memory_fails_ratchet(repo):

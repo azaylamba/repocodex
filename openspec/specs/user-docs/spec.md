@@ -68,7 +68,7 @@ A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of
 
 ### Requirement: Readers can explain purpose, benefit, and the loop
 
-After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to reconstruct: RepoCodex stores *why* in an OKF bundle beside the code; agents retrieve that why and read the pinned source before editing; new work updates why in the same change; a deterministic pin check (ripgrep + git) attests that why is still attached to live text. The benefit is that institutional why cannot silently detach, which instruction files and tests do not guarantee.
+After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to reconstruct: RepoCodex stores *why* in an OKF bundle beside the code; agents retrieve that why and read the pinned source before editing; new work updates why in the same change, including the first substantive edit of an uncovered file; a deterministic pin check (ripgrep + git) attests that why is still attached to live text, and skipped-memory denies a change that recorded no why. The benefit is that institutional why cannot silently detach, which instruction files and tests do not guarantee.
 
 #### Scenario: Purpose and benefit are explicit
 
@@ -84,6 +84,13 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **WHEN** it describes a change to a pinned file
 - **THEN** the steps are: `repocodex context` (or equivalent retrieval), read returned bodies and the pinned code, edit, update or write memory if why changed, `repocodex validate --diff`
 - **AND** skipped retrieval is still caught later by CLAIM_BROKEN, DRIFT, or skipped-memory on hook/CI
+
+#### Scenario: Empty context still requires a write
+
+- **GIVEN** `docs/how-it-works.md`
+- **WHEN** it describes a substantive edit to a file with no retrieved concepts
+- **THEN** it states that the agent must write a pinning concept in the same change
+- **AND** that `LIVE` from validate is not success while `skipped_memory` is non-empty
 
 ### Requirement: Memory docs teach how to read OKF, not how to reimplement it
 
@@ -105,7 +112,7 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 
 ### Requirement: Agent and optional-human docs describe anti-regression as the read loop plus pin check
 
-`docs/agents.md` SHALL be written for coding agents first. It SHALL tell them to retrieve context before edit, keep why intact unless they intend a why-change (`supersedes` + `rationale`), commit `.context/` and `.repocodex/reverse-index.md` (and shards) with the code, and treat hook/CI failure as unrepaired pin breakage. Humans MAY follow the same CLI; they are not required in the hot path. The document SHALL NOT present tests, human approval, or OKF trust tiers as the regression check.
+`docs/agents.md` SHALL be written for coding agents first. It SHALL tell them to retrieve context before edit, keep why intact unless they intend a why-change (`supersedes` + `rationale`), write a pinning concept when context was empty and the edit is substantive, commit `.context/` and `.repocodex/reverse-index.md` (and shards) with the code, treat `WRITE` / non-empty `skipped_memory` as an unfinished turn, and treat hook/CI failure as unrepaired pin breakage or skipped memory. Humans MAY follow the same CLI; they are not required in the hot path. The document SHALL NOT present tests, human approval, or OKF trust tiers as the regression check.
 
 #### Scenario: Agent path is complete
 
@@ -114,6 +121,13 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **THEN** the doc names `repocodex context <paths>` as the first step
 - **AND** names validate before the turn ends
 - **AND** names what to stage when memory was written or reanchored
+
+#### Scenario: Uncovered file path is complete
+
+- **GIVEN** `docs/agents.md`
+- **WHEN** `repocodex context` returns no concepts for the files to edit
+- **THEN** the doc tells the agent to write a pinning concept after the edit
+- **AND** not to treat `result` `LIVE` as done if `skipped_memory` is populated
 
 #### Scenario: Humans are optional
 
@@ -168,3 +182,14 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **WHEN** it describes how CI gets the engine
 - **THEN** it describes git-tag install matching `engine_version`
 - **AND** it does not say the Action runs `pip install repocodex==` against PyPI
+
+### Requirement: Install docs state default shadow still denies skipped memory
+
+`docs/install.md` SHALL state that default `posture = "shadow"` reports pin-check findings without denying drift or `CLAIM_BROKEN`, and SHALL state that undischarged skipped-memory (including first-touch of uncovered source) is blocking in `shadow` so hook and `--check` deny a change that recorded no why.
+
+#### Scenario: Maintainer is not told shadow never blocks
+
+- **GIVEN** `docs/install.md`
+- **WHEN** it describes `posture`
+- **THEN** it does not claim that shadow blocks nothing
+- **AND** it names skipped-memory as blocking on the default install

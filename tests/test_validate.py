@@ -72,12 +72,17 @@ def test_dilution_warning_on_unrelated_pr(repo):
     assert any("ENTERPRISE" in w.get("duplicate_terms", []) or "grace" in str(w) for w in payload["dilution_warnings"])
 
 
-def test_shadow_posture_never_blocks(repo):
+def test_shadow_posture_does_not_block_on_claim_alone(repo):
     (repo.root / ".repocodex.toml").write_text(
         'engine_version = "0.0.1"\nposture = "shadow"\n',
         encoding="utf-8",
     )
-    repo.streamer.write_text("class X:\n    pass\n", encoding="utf-8")
+    repo.payment_gateway.write_text(
+        PAYMENT_GATEWAY.replace("const grace = 3;", "const grace = 1;"),
+        encoding="utf-8",
+    )
     payload = validate(repo.root)
+    assert payload["claim_findings"]
+    assert not payload["skipped_memory"]
     assert payload["blocking"] is False
     assert payload["posture"] == "shadow"

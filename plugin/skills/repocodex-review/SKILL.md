@@ -23,5 +23,6 @@ Findings from this skill post to the **advisory** check only. Never fail the req
    - high churn (concept rewritten repeatedly)
    - workflow pages whose multi-package pins were touched without the page being considered
    - `memory-exempt` without review acknowledgment
+   - `uncovered_file_without_memory` (and other skipped-memory first-touch misses) — missing pinning concept; advisory only
 
 5. Post all of the above to the advisory check. Do not block merge yourself.

@@ -180,6 +180,8 @@ def validate(
     result = _worst(classifications) if classifications else LIVE
     if lost:
         result = "RECONCILE"
+    if ratchet and result in {LIVE, WEAK}:
+        result = "WRITE"
 
     blocking_reasons: list[str] = []
     if lost:
@@ -219,7 +221,7 @@ def validate(
             exemption_refused = "missing_acknowledgment"
 
     if config.posture == "shadow":
-        blocking = False
+        blocking = "skipped_memory" in blocking_reasons
     else:
         blocking = bool(blocking_reasons)
 

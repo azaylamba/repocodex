@@ -59,7 +59,7 @@ Hook, local CLI, and CI resolve that pin so verdicts agree. A running engine tha
 
 Keep the pin in the same commit as the workflow. The Action installs from `git+https://github.com/azaylamba/repocodex.git@v<engine_version>` (tag `v0.0.1` when the pin is `0.0.1`).
 
-Default `posture` is `shadow` (report, do not block). Promote to `ratchet` or `full` when you want the hook and required check to deny.
+Default `posture` is `shadow`: pin-check findings (drift, `CLAIM_BROKEN`, contradiction, index desync) are reported but do not deny. Undischarged skipped-memory — including first-touch of an uncovered source file — **is** blocking in `shadow`, so the hook and `--check` deny a change that recorded no why. Promote to `ratchet` or `full` when you also want the hook and required check to deny drift and `CLAIM_BROKEN`.
 
 ## Hook and CI wrap validate
 

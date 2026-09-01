@@ -34,29 +34,48 @@ The system SHALL provide a stateless CI check, intended for branch protection, t
 
 ### Requirement: Skipped-memory ratchet
 
-The system SHALL scope skipped-memory enforcement to files that already contain at least one attested concept (file-level), extending repo-wide only for agent-authored commits in the `full` posture. Uncovered files SHALL never fail the check in `shadow` or `ratchet`.
+The system SHALL arm skipped-memory on (1) files that already contain at least one attested concept when a substantive change is not discharged, and (2) uncovered, non-excluded files that receive a substantive change (first-touch), in every posture including `shadow`. First-touch SHALL use reason `uncovered_file_without_memory`. Covered-file misses SHALL keep reason `covered_file_without_memory_update`. Uncovered files SHALL fail the check while the first-touch obligation is undischarged unless `memory-exempt` clears it.
 
-#### Scenario: Brownfield repo is not blocked on day one
+#### Scenario: First-touch of an uncovered file requires memory
 
-- **GIVEN** a repository with zero memory coverage in `ratchet` posture
-- **WHEN** PRs touch uncovered files
-- **THEN** the required check passes
+- **GIVEN** a repository with no concept pinning `src/handler.py`
+- **AND** a substantive edit to `src/handler.py`
+- **AND** no concept pinning that file added or modified on the run
+- **WHEN** validation runs in `shadow` posture
+- **THEN** `skipped_memory` contains an entry for that file with reason `uncovered_file_without_memory`
+- **AND** `blocking_reasons` contains `skipped_memory`
+- **AND** `blocking` is `true`
+
+#### Scenario: Writing a pinning concept discharges first-touch
+
+- **GIVEN** a substantive edit to an uncovered file
+- **WHEN** the same change adds a gate-passing concept that pins that file
+- **THEN** `skipped_memory` has no entry for that file
+- **AND** the verdict is non-blocking for skipped-memory
 
 #### Scenario: Covered file requires memory maintenance
 
-- **GIVEN** a file carrying an attested concept, in `ratchet` posture
-- **WHEN** a PR substantively changes that file without updating or writing memory and without a passing attest
+- **GIVEN** a file carrying an attested concept
+- **WHEN** a PR substantively changes that file without updating or writing memory and without a passing in-region attest
 - **THEN** the required check fails
 
 ### Requirement: Rollout postures
 
-The system SHALL ship three configuration postures of the complete product — `shadow` (report everything, block nothing, collect metrics), `ratchet` (enforce DRIFT + covered-file skipped-memory), and `full` (extend enforcement to agent-authored commits, schedule audits) — selected in `.repocodex.toml`, with instrumentation for false-drift rate, rejection reasons, reconcile retries, tokens per turn, and validate latency.
+The system SHALL ship three configuration postures of the complete product — `shadow` (report every deterministic finding; block on undischarged `skipped_memory`; do not block on drift, `CLAIM_BROKEN`, contradiction, or index desync; collect metrics), `ratchet` (also enforce DRIFT, `CLAIM_BROKEN`, contradiction, and index desync), and `full` (`ratchet` plus scheduled audits) — selected in `.repocodex.toml`, with instrumentation for false-drift rate, rejection reasons, reconcile retries, tokens per turn, and validate latency.
 
-#### Scenario: Shadow posture blocks nothing
+#### Scenario: Shadow posture still does not deny drift
 
-- **GIVEN** a repo in `shadow` posture with drifting anchors
+- **GIVEN** a repo in `shadow` posture with drifting anchors and empty `skipped_memory`
 - **WHEN** hooks and CI run
-- **THEN** all verdicts are reported and recorded, and nothing is denied
+- **THEN** the drift is reported
+- **AND** the verdict is non-blocking
+
+#### Scenario: Shadow posture denies skipped memory
+
+- **GIVEN** a repo in `shadow` posture with an undischarged skipped-memory obligation
+- **WHEN** hooks and CI run with `--hook` or `--check`
+- **THEN** the process is denied
+- **AND** `blocking` is `true`
 
 ### Requirement: Human escape hatch
 
@@ -131,18 +150,18 @@ The system SHALL arm the skipped-memory ratchet only for diff content that is no
 
 ### Requirement: Shadow posture reports everything it declines to block
 
-The system SHALL compute and report every deterministic finding in `shadow` posture — including skipped-memory obligations, claim breakage, drift, contradictions, and index desync — and SHALL block on none of them. Suppressing computation of a finding in `shadow` is not conformant, because the metrics that gate posture promotion are derived from those findings.
+The system SHALL compute and report every deterministic finding in `shadow` posture — including skipped-memory obligations, claim breakage, drift, contradictions, and index desync. It SHALL block on undischarged skipped-memory and SHALL NOT block on claim breakage, drift, contradiction, or index desync. Suppressing computation of a finding in `shadow` is not conformant, because the metrics that gate posture promotion are derived from those findings.
 
-#### Scenario: Shadow reports skipped memory without blocking
+#### Scenario: Shadow reports skipped memory and blocks
 
 - **GIVEN** a repository in `shadow` posture with a covered file changed and no memory maintenance
 - **WHEN** validation runs
 - **THEN** the skipped-memory obligation appears in the verdict
-- **AND** the verdict is non-blocking
+- **AND** the verdict is blocking
 
 #### Scenario: Shadow reports claim breakage without blocking
 
-- **GIVEN** a repository in `shadow` posture with a broken claim literal
+- **GIVEN** a repository in `shadow` posture with a broken claim literal and empty `skipped_memory`
 - **WHEN** validation runs
 - **THEN** the `CLAIM_BROKEN` finding appears in the verdict and nothing is denied
 
@@ -164,12 +183,12 @@ The system SHALL populate the metrics that gate posture promotion with measured 
 
 ### Requirement: The required check's blocking set is closed and enumerated
 
-The system SHALL fail the required CI check on exactly these deterministic outcomes and no others: unrepaired DRIFT on a stable anchor, `CLAIM_BROKEN` on a stable concept, an undischarged skipped-memory obligation for the active posture, reverse-index desync, and an unresolved CONTRADICTION. Every entry SHALL be reproducible from repository contents alone, and adding an entry SHALL require a spec change.
+The system SHALL fail the required CI check on exactly these deterministic outcomes and no others: unrepaired DRIFT on a stable anchor (except in `shadow`), `CLAIM_BROKEN` on a stable concept (except in `shadow`), an undischarged skipped-memory obligation in every posture including `shadow`, reverse-index desync (except in `shadow`), and an unresolved CONTRADICTION (except in `shadow`). Every entry SHALL be reproducible from repository contents alone, and adding an entry SHALL require a spec change.
 
 #### Scenario: Enumerated reason blocks
 
 - **GIVEN** a pull request with an unresolved double supersede
-- **WHEN** the required check runs
+- **WHEN** the required check runs outside `shadow` posture
 - **THEN** it fails citing the CONTRADICTION reason from the enumerated set
 
 #### Scenario: Non-enumerated finding does not block
@@ -177,6 +196,13 @@ The system SHALL fail the required CI check on exactly these deterministic outco
 - **GIVEN** a pull request whose only findings are a WEAK anchor, a dilution warning, and an agent-judged impact note
 - **WHEN** the required check runs
 - **THEN** it passes and the findings are reported without blocking
+
+#### Scenario: Skipped memory blocks the required check in shadow
+
+- **GIVEN** a pull request with an undischarged first-touch skipped-memory obligation
+- **AND** `posture = "shadow"`
+- **WHEN** the required check runs
+- **THEN** it fails citing `skipped_memory`
 
 ### Requirement: The escape hatch is verifiable and usable end to end
 
@@ -221,11 +247,12 @@ Substantive-change detection SHALL evaluate the same content the validation's di
 
 ### Requirement: Shadow posture reports the reasons it declines to enforce
 
-In `shadow` posture the verdict SHALL carry the same `blocking_reasons` list it would carry in `ratchet` posture, and the recorded metric SHALL carry the same `rejection_reasons`. Only the `blocking` field SHALL differ. Suppressing the reason list in `shadow` withholds the measurement that posture exists to produce.
+In `shadow` posture the verdict SHALL carry the same `blocking_reasons` list it would carry in `ratchet` posture, and the recorded metric SHALL carry the same `rejection_reasons`. For reasons other than `skipped_memory`, only the `blocking` field SHALL differ. When `skipped_memory` is present, `blocking` SHALL be `true` in `shadow` as in `ratchet`. Suppressing the reason list in `shadow` withholds the measurement that posture exists to produce.
 
-#### Scenario: Shadow carries reasons with blocking false
+#### Scenario: Shadow carries reasons with blocking false for claim breakage
 
 - **GIVEN** a change that breaks a claim in a repo configured with `posture = "shadow"`
+- **AND** `skipped_memory` is empty
 - **WHEN** validation runs
 - **THEN** `blocking` is `false`
 - **AND** `blocking_reasons` contains `claim_broken`
@@ -235,7 +262,6 @@ In `shadow` posture the verdict SHALL carry the same `blocking_reasons` list it 
 - **GIVEN** an identical change validated once under `shadow` and once under `ratchet`
 - **WHEN** both verdicts are compared
 - **THEN** their `blocking_reasons` lists are equal
-- **AND** only `blocking` and `posture` differ
 
 #### Scenario: Recorded metric carries the shadow reasons
 
@@ -278,3 +304,40 @@ A leftover `.context/**/reverse-index.md` SHALL be reported as the existing requ
 - **WHEN** `repocodex validate --diff --staged` (or `--hook`) runs
 - **THEN** `blocking_reasons` contains `index_sync`
 - **AND** a subsequent `git add` of that file clears the `index_sync` reason if pins otherwise match
+
+### Requirement: First-touch skip list does not arm skipped memory
+
+The system SHALL NOT arm first-touch skipped-memory on paths that are excluded (`path_excluded`), under `.context/` or the reverse-index tree, or whose basename is one of: `.gitignore`, `.gitattributes`, `.repocodex.toml`, `.repocodexignore`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `npm-shrinkwrap.json`, `uv.lock`, `Cargo.lock`, `poetry.lock`, `Pipfile.lock`, `composer.lock`, `Gemfile.lock`, `go.sum`. Application source and dependency manifests not in that basename set remain in scope.
+
+#### Scenario: Lockfile-only change does not require a concept
+
+- **GIVEN** a repository with zero coverage
+- **WHEN** the only changed file is `uv.lock`
+- **THEN** `skipped_memory` is empty
+- **AND** `blocking` is `false`
+
+#### Scenario: Gitignore alongside source still requires memory for source
+
+- **GIVEN** a substantive edit to `src/handler.py` and a change to `.gitignore`
+- **AND** no pinning concept for `src/handler.py`
+- **WHEN** validation runs
+- **THEN** `skipped_memory` contains `src/handler.py` with reason `uncovered_file_without_memory`
+- **AND** does not contain `.gitignore`
+
+### Requirement: Undischarged skipped memory is not a LIVE result
+
+When `skipped_memory` is non-empty and the pin-check result would otherwise be `LIVE` or `WEAK`, the verdict `result` SHALL be `WRITE`. `REANCHOR`, `RECONCILE`, `CLAIM_BROKEN`, and `CONTRADICTION` SHALL remain the result when those pin-check outcomes apply; `skipped_memory` SHALL still appear on the payload.
+
+#### Scenario: Uncovered substantive edit is WRITE
+
+- **GIVEN** a first-touch obligation and no drifting anchors
+- **WHEN** validation runs
+- **THEN** `result` is `WRITE`
+- **AND** `blocking` is `true`
+
+#### Scenario: Drift still reports RECONCILE
+
+- **GIVEN** unrepaired DRIFT and an undischarged skipped-memory obligation
+- **WHEN** validation runs
+- **THEN** `result` is `RECONCILE`
+- **AND** `skipped_memory` is still populated
