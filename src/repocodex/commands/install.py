@@ -72,6 +72,41 @@ def install(
                     installed.append(str(dest.relative_to(repo)))
                 else:
                     failed.append(str(dest.relative_to(repo)))
+
+        # Cursor rule — alwaysApply forces the skill loop on every agent turn.
+        cursor_rule_src = _data_path("rules", "cursor", "repocodex.mdc")
+        cursor_rule_dest = repo / ".cursor" / "rules" / "repocodex.mdc"
+        if cursor_rule_src.exists():
+            _copy(cursor_rule_src, cursor_rule_dest)
+            if _resolvable(cursor_rule_dest):
+                installed.append(str(cursor_rule_dest.relative_to(repo)))
+            else:
+                failed.append(".cursor/rules/repocodex.mdc")
+        else:
+            failed.append(".cursor/rules/repocodex.mdc (missing from distribution)")
+
+        # CLAUDE.md — Claude Code auto-reads this at session start.
+        claude_md_src = _data_path("rules", "claude", "CLAUDE.md")
+        claude_md_dest = repo / "CLAUDE.md"
+        if claude_md_src.exists():
+            if not claude_md_dest.exists():
+                _copy(claude_md_src, claude_md_dest)
+                if _resolvable(claude_md_dest):
+                    installed.append("CLAUDE.md")
+                else:
+                    failed.append("CLAUDE.md")
+            else:
+                # CLAUDE.md already exists — append a repocodex section if not present.
+                existing = claude_md_dest.read_text(encoding="utf-8")
+                marker = "repocodex context"
+                if marker not in existing:
+                    addition = "\n" + claude_md_src.read_text(encoding="utf-8")
+                    claude_md_dest.write_text(existing.rstrip() + addition, encoding="utf-8")
+                    installed.append("CLAUDE.md (updated)")
+                else:
+                    skipped.append("CLAUDE.md (repocodex section already present)")
+        else:
+            failed.append("CLAUDE.md (missing from distribution)")
         plugin_src = _data_path("plugin")
         plugin_dest = repo / ".repocodex" / "plugin"
         if plugin_src.exists():
