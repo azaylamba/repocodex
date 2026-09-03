@@ -196,11 +196,18 @@ def _identities_pinning_path(path: str, concepts: list[ConceptDocument]) -> set[
 
 
 def _is_memory_path(normalized: str) -> bool:
+    # Plugin-managed skill copies live under .repocodex/plugin/, .claude/skills/,
+    # and .cursor/skills/.  They are auto-generated artefacts, not source files,
+    # so they must not arm first-touch.
+    _PLUGIN_PREFIXES = (
+        ".context/",
+        ".repocodex/",
+        ".claude/skills/",
+        ".cursor/skills/",
+    )
     return (
-        normalized.startswith(".context/")
-        or "/.context/" in normalized
-        or normalized.startswith(".repocodex/")
-        or "/.repocodex/" in f"/{normalized}"
+        any(normalized.startswith(p) for p in _PLUGIN_PREFIXES)
+        or any(f"/{p}" in f"/{normalized}" for p in _PLUGIN_PREFIXES)
         or normalized.endswith("reverse-index.md")
     )
 
