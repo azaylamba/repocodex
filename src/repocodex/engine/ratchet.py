@@ -198,10 +198,10 @@ def _identities_pinning_path(path: str, concepts: list[ConceptDocument]) -> set[
 def _is_memory_path(normalized: str) -> bool:
     return (
         normalized.startswith(".context/")
-        or normalized.endswith("reverse-index.md")
         or "/.context/" in normalized
-        or "/.repocodex/reverse-index/" in f"/{normalized}"
-        or normalized.startswith(".repocodex/reverse-index/")
+        or normalized.startswith(".repocodex/")
+        or "/.repocodex/" in f"/{normalized}"
+        or normalized.endswith("reverse-index.md")
     )
 
 
@@ -242,6 +242,7 @@ def skipped_memory(
         if not is_substantive_change(config.root, path, staged=staged, base=base):
             continue
         pinning = set(reverse_index.get(path, []) or reverse_index.get(normalized, []))
+        pinning |= _identities_pinning_path(path, concepts)
         if pinning & pinning_updated:
             continue
         ranges = changed_line_ranges(config.root, path, staged=staged, base=base)

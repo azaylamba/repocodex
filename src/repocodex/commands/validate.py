@@ -33,24 +33,18 @@ def _paths_from_name_status(output: str) -> list[str]:
 
 
 def changed_files(root: Path, *, base: str | None, staged: bool) -> list[str]:
-    args = ["diff", "-M", "--name-status"]
     if staged:
-        args.append("--cached")
-    elif base:
-        args.append(base)
-    result = run_git(args, cwd=root)
-    files = _paths_from_name_status(result.stdout)
-    if not files and not staged and not base:
-        unstaged = run_git(["diff", "-M", "--name-status"], cwd=root)
-        staged_files = run_git(["diff", "-M", "--name-status", "--cached"], cwd=root)
-        untracked = run_git(["ls-files", "--others", "--exclude-standard"], cwd=root)
-        files = sorted(
-            {
-                *_paths_from_name_status(unstaged.stdout),
-                *_paths_from_name_status(staged_files.stdout),
-                *[line.strip() for line in untracked.stdout.splitlines() if line.strip()],
-            }
-        )
+        result = run_git(["diff", "-M", "--name-status", "--cached"], cwd=root)
+        return [path for path in dict.fromkeys(_paths_from_name_status(result.stdout)) if path]
+    if base:
+        result = run_git(["diff", "-M", "--name-status", base], cwd=root)
+        return [path for path in dict.fromkeys(_paths_from_name_status(result.stdout)) if path]
+    vs_head = run_git(["diff", "-M", "--name-status", "HEAD"], cwd=root)
+    untracked = run_git(["ls-files", "--others", "--exclude-standard"], cwd=root)
+    files = [
+        *_paths_from_name_status(vs_head.stdout),
+        *[line.strip() for line in untracked.stdout.splitlines() if line.strip()],
+    ]
     return [path for path in dict.fromkeys(files) if path]
 
 

@@ -162,6 +162,43 @@ def test_hook_and_check_exit_1_on_first_touch(uncovered_repo: Path):
     assert hook_payload["blocking"] is True
 
 
+def test_write_discharges_out_of_region_hunks_on_the_same_run(uncovered_repo: Path):
+    """A pinning write must clear skipped-memory even when new code sits outside the anchor region.
+
+    Typical agent session: edit a tracked file, `repocodex write` (untracked `.context/`),
+    re-validate. If changed_files omits untracked memory, pinning_updated is empty and
+    covered-file ratchet re-arms as covered_file_without_memory_update.
+    """
+    _shadow(uncovered_repo)
+    (uncovered_repo / "src" / "app.py").write_text(
+        FIRST_TOUCH_SOURCE.rstrip() + "\n" + ("\n" * 80) + "def refund_batches():\n    return []\n",
+        encoding="utf-8",
+    )
+    result = write_memory(
+        uncovered_repo,
+        ".",
+        identity="decisions/first-touch-app",
+        stdin_text=FIRST_TOUCH_CONCEPT,
+    )
+    assert result["accepted"] is True
+    payload = validate(uncovered_repo)
+    assert any(path.startswith(".context/") for path in payload["changed_files"])
+    assert not payload["skipped_memory"]
+    assert payload["blocking"] is False
+
+
+def test_untracked_new_file_listed_alongside_tracked_edit(uncovered_repo: Path):
+    _shadow(uncovered_repo)
+    (uncovered_repo / "src" / "app.py").write_text("def main():\n    return 2\n", encoding="utf-8")
+    (uncovered_repo / "src" / "new_handler.py").write_text("def handle():\n    return 1\n", encoding="utf-8")
+    payload = validate(uncovered_repo)
+    assert "src/app.py" in payload["changed_files"]
+    assert "src/new_handler.py" in payload["changed_files"]
+    reasons = {item["path"]: item["reason"] for item in payload["skipped_memory"]}
+    assert reasons.get("src/app.py") == "uncovered_file_without_memory"
+    assert reasons.get("src/new_handler.py") == "uncovered_file_without_memory"
+
+
 def test_coding_skill_names_write_and_forbids_live_with_skipped_memory():
     roots = [
         Path("src/repocodex/data/skills/repocodex-coding/SKILL.md"),
