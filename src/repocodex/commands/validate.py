@@ -32,20 +32,31 @@ def _paths_from_name_status(output: str) -> list[str]:
     return files
 
 
+_ARTEFACT_PREFIXES = (
+    ".claude/skills/",
+    ".cursor/skills/",
+    ".repocodex/plugin/skills/",
+)
+
+
+def _is_artefact(path: str) -> bool:
+    return any(path.startswith(p) for p in _ARTEFACT_PREFIXES)
+
+
 def changed_files(root: Path, *, base: str | None, staged: bool) -> list[str]:
     if staged:
         result = run_git(["diff", "-M", "--name-status", "--cached"], cwd=root)
-        return [path for path in dict.fromkeys(_paths_from_name_status(result.stdout)) if path]
+        return [p for p in dict.fromkeys(_paths_from_name_status(result.stdout)) if p and not _is_artefact(p)]
     if base:
         result = run_git(["diff", "-M", "--name-status", base], cwd=root)
-        return [path for path in dict.fromkeys(_paths_from_name_status(result.stdout)) if path]
+        return [p for p in dict.fromkeys(_paths_from_name_status(result.stdout)) if p and not _is_artefact(p)]
     vs_head = run_git(["diff", "-M", "--name-status", "HEAD"], cwd=root)
     untracked = run_git(["ls-files", "--others", "--exclude-standard"], cwd=root)
     files = [
         *_paths_from_name_status(vs_head.stdout),
         *[line.strip() for line in untracked.stdout.splitlines() if line.strip()],
     ]
-    return [path for path in dict.fromkeys(files) if path]
+    return [p for p in dict.fromkeys(files) if p and not _is_artefact(p)]
 
 
 def _worst(outcomes: list[str]) -> str:
