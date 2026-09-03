@@ -73,7 +73,7 @@ def install(
                 else:
                     failed.append(str(dest.relative_to(repo)))
 
-        # Cursor rule — alwaysApply forces the skill loop on every agent turn.
+        # Cursor rule — alwaysApply points at the skill; the skill owns the loop.
         cursor_rule_src = _data_path("rules", "cursor", "repocodex.mdc")
         cursor_rule_dest = repo / ".cursor" / "rules" / "repocodex.mdc"
         if cursor_rule_src.exists():
@@ -85,7 +85,7 @@ def install(
         else:
             failed.append(".cursor/rules/repocodex.mdc (missing from distribution)")
 
-        # CLAUDE.md — Claude Code auto-reads this at session start.
+        # CLAUDE.md — Claude Code auto-reads this at session start; pointer only.
         claude_md_src = _data_path("rules", "claude", "CLAUDE.md")
         claude_md_dest = repo / "CLAUDE.md"
         if claude_md_src.exists():
@@ -96,9 +96,9 @@ def install(
                 else:
                     failed.append("CLAUDE.md")
             else:
-                # CLAUDE.md already exists — append a repocodex section if not present.
+                # CLAUDE.md already exists — append a pointer if not present.
                 existing = claude_md_dest.read_text(encoding="utf-8")
-                marker = "repocodex context"
+                marker = ".claude/skills/repocodex-coding/SKILL.md"
                 if marker not in existing:
                     addition = "\n" + claude_md_src.read_text(encoding="utf-8")
                     claude_md_dest.write_text(existing.rstrip() + addition, encoding="utf-8")

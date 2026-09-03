@@ -1,12 +1,6 @@
 ---
-description: RepoCodex executable memory — always retrieve context before editing and validate before finishing the turn.
+description: Require the RepoCodex coding skill for coding work. Procedure lives in the skill, not here.
 alwaysApply: true
 ---
 
-Before editing any source file, read `.cursor/skills/repocodex-coding/SKILL.md` and follow its loop exactly. Do not skip any step:
-
-1. Run `repocodex context <paths>` before editing.
-2. Edit code.
-3. Run `repocodex validate --diff` before finishing the turn.
-4. If `result` is `WRITE` or `skipped_memory` is non-empty, run `repocodex write` to pin the concept, then re-validate.
-5. Do not finish the turn while `blocking` is true.
+This repository uses RepoCodex. For any coding task, read and follow `.cursor/skills/repocodex-coding/SKILL.md`. Do not skip that loop. Do not restate or invent a substitute workflow here.
