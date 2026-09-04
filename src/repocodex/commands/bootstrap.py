@@ -32,7 +32,7 @@ def _stale_after(days: int = 30) -> str:
 
 def _stable_id(rel: str, note: str) -> str:
     digest = hashlib.sha256(f"{rel}\n{note}".encode("utf-8")).hexdigest()[:12]
-    return f"bootstrap/{Path(rel).stem}-{digest}"
+    return f"decisions/{Path(rel).stem}-{digest}"
 
 
 def _commit_for(repo: Path, rel: str) -> str | None:

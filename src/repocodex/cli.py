@@ -12,6 +12,7 @@ from repocodex.commands.bootstrap import bootstrap as run_bootstrap
 from repocodex.commands.context import context_for
 from repocodex.commands.install import install as run_install
 from repocodex.commands.reconcile import apply_anchor_patch, reconcile_memory
+from repocodex.commands.relocate import relocate_memory
 from repocodex.commands.repair import repair as run_repair
 from repocodex.commands.validate import validate as run_validate
 from repocodex.commands.write import write_memory
@@ -85,6 +86,20 @@ def write_command(
         raise typer.BadParameter("provide a concept file or --stdin")
     payload = _guarded(lambda: write_memory(_repo(), concept or Path("."), identity=identity, stdin_text=text))
     _emit(payload, 0 if payload.get("accepted") else 1)
+
+
+@app.command("relocate")
+def relocate_command(
+    identity: Optional[str] = typer.Argument(None),
+    mismatched: bool = typer.Option(
+        False, "--mismatched", help="Move all authored-type concepts with wrong prefixes"
+    ),
+) -> None:
+    """Move authored concepts into the type-folder identity required by their type."""
+    if not mismatched and not identity:
+        raise typer.BadParameter("provide an identity or --mismatched")
+    payload = _guarded(lambda: relocate_memory(_repo(), identity, mismatched=mismatched))
+    _emit(payload)
 
 
 @app.command("reconcile")

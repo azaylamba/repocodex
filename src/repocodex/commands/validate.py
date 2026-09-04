@@ -8,6 +8,7 @@ from repocodex.config import RepoConfig, load_config
 from repocodex.engine.blocking import REQUIRED_CHECK_REASONS
 from repocodex.engine.contradiction import contradiction_flags
 from repocodex.engine.dilution import dilution_warnings
+from repocodex.engine.gate import identity_prefix_warnings
 from repocodex.engine.impact import intent_impact
 from repocodex.engine.liveness import CLAIM_BROKEN, DRIFT, LIVE, REANCHOR, WEAK, classify_anchor, evaluate_claims
 from repocodex.engine.ratchet import skipped_memory
@@ -176,6 +177,7 @@ def validate(
         base=base,
     )
     dilutions = dilution_warnings(concepts, files, config, base=base, staged=staged)
+    prefix_warnings = identity_prefix_warnings(concepts)
 
     classifications = [o.classification for o in outcomes]
     if contradictions:
@@ -253,6 +255,7 @@ def validate(
             "candidates": candidates,
             "impacted_scenarios": impacted,
             "dilution_warnings": dilutions,
+            "identity_prefix_warnings": prefix_warnings,
             "contradictions": contradictions,
             "index_sync": sync_errors,
             "skipped_memory": ratchet,

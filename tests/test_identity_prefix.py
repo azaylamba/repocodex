@@ -1,18 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
-
+from repocodex.commands.relocate import relocate_memory
 from repocodex.commands.validate import validate
 from repocodex.commands.write import write_memory
-from repocodex.store.bundle import ensure_bundle, write_concept
-from repocodex.schema import (
-    Anchor,
-    ConceptDocument,
-    ConceptFrontmatter,
-    ConceptType,
-    Verification,
-    parse_concept,
-)
 from tests.fixtures.repos import STREAMER_CONCEPT
 
 
@@ -101,3 +91,44 @@ Narrative only.
     )
     assert payload["accepted"] is True
     assert (repo.root / ".context" / "ops-notes.md").exists()
+
+
+def test_validate_emits_identity_prefix_warnings(repo):
+    path = repo.root / ".context" / "legacy-streamer.md"
+    path.write_text(STREAMER_CONCEPT, encoding="utf-8")
+    payload = validate(repo.root, all_concepts=True)
+    warnings = payload.get("identity_prefix_warnings") or []
+    assert any(w.get("concept") == "legacy-streamer" for w in warnings)
+    assert any(w.get("suggested") == "decisions/legacy-streamer" for w in warnings)
+    # Prefix debt alone must not block.
+    assert "identity_prefix_mismatch" not in (payload.get("blocking_reasons") or [])
+
+
+def test_relocate_moves_flat_technical_decision(repo):
+    path = repo.root / ".context" / "legacy-streamer.md"
+    path.write_text(STREAMER_CONCEPT, encoding="utf-8")
+    payload = relocate_memory(repo.root, "legacy-streamer")
+    assert any(
+        m["from"] == "legacy-streamer" and m["to"] == "decisions/legacy-streamer"
+        for m in payload["moved"]
+    )
+    assert not path.exists()
+    assert (repo.root / ".context" / "decisions" / "legacy-streamer.md").exists()
+
+
+def test_relocate_skips_when_target_exists(repo):
+    flat = repo.root / ".context" / "legacy-streamer.md"
+    flat.write_text(STREAMER_CONCEPT, encoding="utf-8")
+    target = repo.root / ".context" / "decisions" / "legacy-streamer.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(STREAMER_CONCEPT, encoding="utf-8")
+    payload = relocate_memory(repo.root, "legacy-streamer")
+    assert payload["moved"] == []
+    assert any(s.get("reason") == "target_exists" for s in payload["skipped"])
+    assert flat.exists()
+
+
+def test_relocate_not_found(repo):
+    payload = relocate_memory(repo.root, "missing-concept")
+    assert payload["moved"] == []
+    assert any(s.get("reason") == "not_found" for s in payload["skipped"])

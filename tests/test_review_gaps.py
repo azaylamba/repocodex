@@ -393,7 +393,8 @@ def test_bootstrap_cites_per_concept_source(repo):
     subprocess.run(["git", "add", str(src)], cwd=repo.root, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "hint", "--no-verify"], cwd=repo.root, check=True, capture_output=True)
     payload = bootstrap(repo.root)
-    docs = [d for d in load_concepts(repo.root) if d.identity.startswith("bootstrap/")]
+    docs = [d for d in load_concepts(repo.root) if d.identity in payload["kept"]]
+    assert all(d.identity.startswith("decisions/") for d in docs)
     if payload["kept"]:
         assert all(
             d.frontmatter.sources
