@@ -164,6 +164,8 @@ The reverse index is written beside metrics: `.repocodex/reverse-index.md` (shar
 
 Identity is the path relative to `.context/` with `.md` removed (OKF). An optional `contract_id` may exist for display; it is not identity.
 
+**Authored type folders (required for new writes):** `TechnicalDecision` → `decisions/`; `InvariantContract` → `invariants/`; `BusinessWorkflow` → `workflows/`; `GuardrailDecision` → `decisions/` or `guardrails/`. Package shards still use these prefixes inside the shard (e.g. `packages/billing/.context/decisions/…`). Unknown OKF types may live anywhere. New writes that violate the map are rejected with `identity_prefix_mismatch`; existing flat files may be updated with a suggestion and appear in validate's non-blocking `identity_prefix_warnings`; `repocodex relocate` moves them.
+
 ### 5.2 Frontmatter contract
 
 OKF-required: `type`. OKF v0.2 families used as specified upstream: `title`, `description`, `tags`, `generated`, `verified`, `status` (`draft` | `stable` | `deprecated`; omitted `status` means `stable`), `stale_after`, `sources` (list of objects with `resource`).

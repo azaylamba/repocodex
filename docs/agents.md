@@ -52,12 +52,12 @@ Types are **orthogonal** — one change may write or update more than one when e
 
 | Type | Use when |
 | --- | --- |
-| `TechnicalDecision` | Why this construct exists; default first-touch coverage pin |
-| `InvariantContract` | Must-hold token (threshold/enum/error string); **requires `claims`** |
-| `BusinessWorkflow` | Thin cross-package flow; one anchor per site |
-| `GuardrailDecision` | Global do-not; pin enforcement config, not app source |
+| `TechnicalDecision` | Why this construct exists; default first-touch coverage pin; identity under `decisions/` |
+| `InvariantContract` | Must-hold token (threshold/enum/error string); **requires `claims`**; identity under `invariants/` |
+| `BusinessWorkflow` | Thin cross-package flow; one anchor per site; identity under `workflows/` |
+| `GuardrailDecision` | Global do-not; pin enforcement config, not app source; identity under `decisions/` or `guardrails/` |
 
-The full when/how recipe — including volume and a multi-type example — lives in the installed coding skill (`.cursor/skills/repocodex-coding/SKILL.md` or `.claude/skills/repocodex-coding/SKILL.md` after `repocodex install`). Follow that skill; do not invent a substitute.
+New writes of those four types without the type-folder prefix are rejected (`identity_prefix_mismatch`). Use `repocodex relocate` (or `--mismatched`) to move legacy flat files. The full when/how recipe — including volume and a multi-type example — lives in the installed coding skill (`.cursor/skills/repocodex-coding/SKILL.md` or `.claude/skills/repocodex-coding/SKILL.md` after `repocodex install`). Follow that skill; do not invent a substitute.
 
 ## Humans
 

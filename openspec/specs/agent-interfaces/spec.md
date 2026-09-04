@@ -8,7 +8,7 @@ Expose all engine behavior through a canonical CLI with machine-readable JSON. S
 
 ### Requirement: Canonical CLI
 
-The system SHALL expose all functionality through a CLI — `validate`, `write`, `reconcile`, `context`, `repair`, `install`, `bootstrap`, `audit` — with machine-readable JSON outputs that include `engine_version`. All other surfaces (skills, MCP, hooks, CI) SHALL wrap the CLI rather than reimplement it.
+The system SHALL expose all functionality through a CLI — `validate`, `write`, `relocate`, `reconcile`, `context`, `repair`, `install`, `bootstrap`, `audit` — with machine-readable JSON outputs that include `engine_version`. All other surfaces (skills, MCP, hooks, CI) SHALL wrap the CLI rather than reimplement it.
 
 #### Scenario: One install wires the portable floor
 
@@ -27,7 +27,7 @@ The system SHALL expose all functionality through a CLI — `validate`, `write`,
 
 The system SHALL ship a coding-agent skill enforcing the loop: retrieve context before editing, run the impact recipe on the diff, validate before ending the turn, apply REANCHOR patches, repair DRIFT via `reconcile`/`write` in the same change, and write gate-passing concept(s) when `result` is `WRITE` or `skipped_memory` is non-empty — with anchor-authoring guidance that prefers stable tokens over renameable identifiers. `LIVE` / `WEAK` SHALL mean proceed only when `skipped_memory` is empty.
 
-The same skill SHALL contain a self-contained orthogonal type recipe: after a code change, check independently whether a `TechnicalDecision`, `InvariantContract`, `BusinessWorkflow`, and/or `GuardrailDecision` applies; write or update every type that applies; do not invent a type that does not apply; do not stop after the first applicable type. It SHALL state that one concept covers one why (not one file or one `skipped_memory` path), that several paths sharing one why use one page with multiple anchors, that several distinct whys (including all four types) MAY appear in the same change, and that `InvariantContract` requires `claims` with frozen literals. It SHALL include a worked example of one change that updates all four types. It SHALL NOT tell agents to pick exactly one type per change. Packaged, plugin, and `plugin/skills` copies SHALL stay aligned.
+The same skill SHALL contain a self-contained orthogonal type recipe: after a code change, check independently whether a `TechnicalDecision`, `InvariantContract`, `BusinessWorkflow`, and/or `GuardrailDecision` applies; write or update every type that applies; do not invent a type that does not apply; do not stop after the first applicable type. It SHALL state that one concept covers one why (not one file or one `skipped_memory` path), that several paths sharing one why use one page with multiple anchors, that several distinct whys (including all four types) MAY appear in the same change, and that `InvariantContract` requires `claims` with frozen literals. It SHALL require type-folder identities (`decisions/`, `invariants/`, `workflows/`, `guardrails/` as applicable) and mention `identity_prefix_mismatch` / `repocodex relocate`. It SHALL include a worked example of one change that updates all four types. It SHALL NOT tell agents to pick exactly one type per change. Packaged, plugin, and `plugin/skills` copies SHALL stay aligned.
 
 #### Scenario: Turn cannot end on unrepaired drift
 
@@ -50,12 +50,13 @@ The same skill SHALL contain a self-contained orthogonal type recipe: after a co
 - **THEN** the skill names `TechnicalDecision`, `InvariantContract`, `BusinessWorkflow`, and `GuardrailDecision`
 - **AND** it states types are independent and may coexist in one change
 - **AND** it requires `claims` on `InvariantContract`
+- **AND** it requires type-folder identities and mentions `identity_prefix_mismatch`
 - **AND** it states one concept per why
 - **AND** it does not instruct the agent to pick exactly one type per change
 
 ### Requirement: Review-agent skill
 
-The system SHALL ship a review-agent skill that runs the impact recipe on every PR, verifies each new concept's prose against the originating diff, and flags unreconciled drift, skipped recipe steps, why-changes without `supersedes`/`rationale`, weakenings, contradictions, high churn, uncovered substantive files listed in `skipped_memory` without a pinning concept, `InvariantContract` pages missing `claims`, contractual literals in a `TechnicalDecision` body without `claims`, `GuardrailDecision` pages pinned only to application source, thick single-package pages typed as `BusinessWorkflow`, and multiple new pages for the same why — posting all findings to the advisory check only. The skill SHALL NOT flag a PR solely because it adds more than one concept type when the bodies are distinct whys. Packaged, plugin, and `plugin/skills` copies SHALL stay aligned.
+The system SHALL ship a review-agent skill that runs the impact recipe on every PR, verifies each new concept's prose against the originating diff, and flags unreconciled drift, skipped recipe steps, why-changes without `supersedes`/`rationale`, weakenings, contradictions, high churn, uncovered substantive files listed in `skipped_memory` without a pinning concept, `InvariantContract` pages missing `claims`, contractual literals in a `TechnicalDecision` body without `claims`, `GuardrailDecision` pages pinned only to application source, thick single-package pages typed as `BusinessWorkflow`, multiple new pages for the same why, and new authored-type concepts missing type-folder identities (including validate `identity_prefix_warnings`) — posting all findings to the advisory check only. The skill SHALL NOT flag a PR solely because it adds more than one concept type when the bodies are distinct whys. Packaged, plugin, and `plugin/skills` copies SHALL stay aligned.
 
 #### Scenario: New concept verified while diff is in context
 

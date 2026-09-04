@@ -29,6 +29,7 @@ Findings from this skill post to the **advisory** check only. Never fail the req
    - `GuardrailDecision` whose only anchors are application source, not enforcement config
    - thick single-package page typed as `BusinessWorkflow`
    - multiple new pages for the **same** why
+   - new authored-type concepts at `.context/` root (missing `decisions/` / `invariants/` / `workflows/` / `guardrails/` prefix); also note validate `identity_prefix_warnings`
 
 5. Do **not** flag a PR solely because it adds more than one concept type when the bodies are distinct whys. Types are independent and may coexist in one change.
 

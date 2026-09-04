@@ -18,7 +18,7 @@ The system SHALL express every concept's link to code as one or more anchors, ea
 
 ### Requirement: Deterministic write gate
 
-The system SHALL accept or reject every concept write using only ripgrep counts and file reads — no model, no network — failing closed with machine-readable reasons: zero hits (`no_match`), multiple disjoint in-file co-occurrence regions (`ambiguous_in_file`), no term under the repo-wide distinctiveness ceiling (`not_distinctive`), declared claim literals absent from anchor terms or matched source (`claim_not_anchored`), `type: InvariantContract` with missing or empty `claims` (`claims_required`), and pins inside excluded paths (`excluded_path`). Reject payloads SHALL include per-term repo-wide hit counts.
+The system SHALL accept or reject every concept write using only ripgrep counts and file reads — no model, no network — failing closed with machine-readable reasons: zero hits (`no_match`), multiple disjoint in-file co-occurrence regions (`ambiguous_in_file`), no term under the repo-wide distinctiveness ceiling (`not_distinctive`), declared claim literals absent from anchor terms or matched source (`claim_not_anchored`), `type: InvariantContract` with missing or empty `claims` (`claims_required`), pins inside excluded paths (`excluded_path`), and authored-type identities that lack a required type-folder prefix on a **new** write (`identity_prefix_mismatch`). Reject payloads SHALL include per-term repo-wide hit counts.
 
 #### Scenario: Tautological anchor rejected
 
@@ -39,6 +39,20 @@ The system SHALL accept or reject every concept write using only ripgrep counts 
 - **WHEN** `repocodex write` evaluates it
 - **THEN** the write is rejected with `claims_required`
 - **AND** a `TechnicalDecision` without `claims` is not rejected for that reason alone
+
+#### Scenario: New authored concept without type-folder identity is rejected
+
+- **GIVEN** a new `TechnicalDecision` (or other authored type) whose identity is not under an allowed prefix (`decisions/`, `invariants/`, `workflows/`, or for `GuardrailDecision` also `guardrails/`)
+- **WHEN** `repocodex write` evaluates it
+- **THEN** the write is rejected with `identity_prefix_mismatch`
+- **AND** suggestions name the recommended identity
+
+#### Scenario: Existing flat authored identity may be updated
+
+- **GIVEN** a concept file already present at a flat identity under `.context/`
+- **WHEN** `repocodex write` updates that same identity
+- **THEN** the write may be accepted by the prefix rule
+- **AND** the payload includes a non-blocking suggestion to relocate under the type folder
 
 ### Requirement: Liveness classification
 

@@ -27,6 +27,9 @@ def test_coding_skill_teaches_orthogonal_types():
             assert name in text, f"{path} missing {name}"
         assert "Requires `claims`" in text or "**Requires `claims`**" in text
         assert "InvariantContract" in text and "claims" in text
+        assert "identity_prefix_mismatch" in text
+        assert "decisions/" in text and "invariants/" in text
+        assert "relocate" in text
         # WRITE bullet must force the recipe before write (not only a section below the loop)
         write_lines = [
             line
@@ -54,3 +57,4 @@ def test_review_skill_flags_type_misuse_not_multi_type():
         lowered = text.lower()
         assert "do **not** flag" in text.lower() or "do not flag" in lowered
         assert "distinct whys" in lowered or "distinct why" in lowered
+        assert "identity_prefix_warnings" in text or "type-folder" in lowered or "decisions/" in text

@@ -43,10 +43,12 @@ After the code change, run **all four** checks. Write or update **every** type t
 
 | When this is true | Type | How |
 | --- | --- | --- |
-| Why this **construct** exists (shape, API, generator vs list, …) | `TechnicalDecision` | Pin a distinctive construct from the why (`yield`, error string), not the function name alone. Path: `decisions/` or package-local. Default **coverage** type when first-touch needs a pin and nothing else applies. |
-| A **verbatim token** must not change silently (threshold, enum, contract error string) — losing it should `CLAIM_BROKEN`, not WEAK | `InvariantContract` | **Requires `claims`** with frozen literals; each literal in owning anchor `all_of` and matched region. Not for structural shape. Path: `invariants/` or package-local. |
-| **Cross-package flow** (order, boundaries) | `BusinessWorkflow` | Thin page: ordering, boundaries, links to step pages. One anchor per participating site. Path: `workflows/`. |
-| Global **do-not** / layering rule with an enforcement tool | `GuardrailDecision` | Pin the **enforcement config** (linter, import-linter, CI), not a complying app file. Path: `decisions/` or `guardrails/`. |
+| Why this **construct** exists (shape, API, generator vs list, …) | `TechnicalDecision` | Pin a distinctive construct from the why (`yield`, error string), not the function name alone. **Identity MUST be under `decisions/`** (or the package shard's `decisions/`). Default **coverage** type when first-touch needs a pin and nothing else applies. |
+| A **verbatim token** must not change silently (threshold, enum, contract error string) — losing it should `CLAIM_BROKEN`, not WEAK | `InvariantContract` | **Requires `claims`** with frozen literals; each literal in owning anchor `all_of` and matched region. Not for structural shape. **Identity MUST be under `invariants/`**. |
+| **Cross-package flow** (order, boundaries) | `BusinessWorkflow` | Thin page: ordering, boundaries, links to step pages. One anchor per participating site. **Identity MUST be under `workflows/`**. |
+| Global **do-not** / layering rule with an enforcement tool | `GuardrailDecision` | Pin the **enforcement config** (linter, import-linter, CI), not a complying app file. **Identity MUST be under `decisions/` or `guardrails/`**. |
+
+`repocodex write --identity` for those four types is rejected with `identity_prefix_mismatch` when the identity lacks the type folder (e.g. use `--identity decisions/custom-data-streamer`, not `custom-data-streamer`). Existing flat files may still be updated (suggestion only); clear debt with `repocodex relocate <identity>` or `repocodex relocate --mismatched`. Validate lists remaining debt in non-blocking `identity_prefix_warnings`.
 
 Do not relabel an `InvariantContract` as `TechnicalDecision` to dodge `claims`. Unanchored narrative pages do not discharge `skipped_memory`.
 
