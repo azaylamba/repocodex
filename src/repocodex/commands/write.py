@@ -7,6 +7,9 @@ from repocodex.engine.gate import (
     GateResult,
     claims_required_reject,
     evaluate_write,
+    identity_prefix_mismatch_reject,
+    identity_prefix_ok,
+    identity_prefix_suggestion,
     missing_invariant_claims,
 )
 from repocodex.schema import (
@@ -101,6 +104,12 @@ def write_memory(
     if missing_invariant_claims(doc):
         return envelope(claims_required_reject().to_json())
 
+    prefix_suggestion: str | None = None
+    if not identity_prefix_ok(doc.frontmatter.type, ident):
+        if existing_path is None:
+            return envelope(identity_prefix_mismatch_reject(doc.frontmatter.type, ident).to_json())
+        prefix_suggestion = identity_prefix_suggestion(doc.frontmatter.type, ident)
+
     if doc.anchors:
         gate = evaluate_write(doc, config)
     else:
@@ -108,6 +117,11 @@ def write_memory(
     payload = envelope(gate.to_json())
     if not gate.accepted:
         return payload
+    if prefix_suggestion:
+        suggestions = list(payload.get("suggestions") or [])
+        if prefix_suggestion not in suggestions:
+            suggestions.append(prefix_suggestion)
+        payload["suggestions"] = suggestions
     if doc.frontmatter.status == ConceptStatus.draft and not doc.frontmatter.stale_after:
         doc.frontmatter.status = ConceptStatus.stable
     shard = None

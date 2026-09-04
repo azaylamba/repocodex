@@ -16,7 +16,7 @@ from repocodex.engine.match import (
     read_pinned,
     resolve_claim_owner,
 )
-from repocodex.schema import ConceptDocument, ConceptType
+from repocodex.schema import ConceptDocument, ConceptType, type_str
 from repocodex.tools.git import git_check_ignore
 from repocodex.tools.ripgrep import rg_count, run_rg
 
@@ -31,6 +31,16 @@ CLAIMS_REQUIRED_SUGGESTION = (
     "declare claims with frozen literals (thresholds, enums, contract error strings)"
 )
 
+# Authored types → required first path segment(s) under the owning .context/ shard.
+AUTHORED_TYPE_PREFIXES: dict[str, tuple[str, ...]] = {
+    ConceptType.TechnicalDecision.value: ("decisions/",),
+    ConceptType.InvariantContract.value: ("invariants/",),
+    ConceptType.BusinessWorkflow.value: ("workflows/",),
+    ConceptType.GuardrailDecision.value: ("decisions/", "guardrails/"),
+}
+
+IDENTITY_PREFIX_MISMATCH = "identity_prefix_mismatch"
+
 
 def missing_invariant_claims(doc: ConceptDocument) -> bool:
     return doc.frontmatter.type == ConceptType.InvariantContract.value and not doc.frontmatter.claims
@@ -43,6 +53,62 @@ def claims_required_reject() -> GateResult:
         suggestions=[CLAIMS_REQUIRED_SUGGESTION],
         reasons=[CLAIMS_REQUIRED_REASON],
     )
+
+
+def allowed_prefixes(concept_type: str | ConceptType | None) -> tuple[str, ...] | None:
+    key = type_str(concept_type) if concept_type is not None else ""
+    if not key:
+        return None
+    return AUTHORED_TYPE_PREFIXES.get(key)
+
+
+def identity_prefix_ok(concept_type: str | ConceptType | None, identity: str) -> bool:
+    prefixes = allowed_prefixes(concept_type)
+    if prefixes is None:
+        return True
+    normalized = identity.replace("\\", "/").lstrip("/")
+    return any(normalized.startswith(prefix) for prefix in prefixes)
+
+
+def suggested_identity(concept_type: str | ConceptType | None, identity: str) -> str | None:
+    prefixes = allowed_prefixes(concept_type)
+    if prefixes is None:
+        return None
+    leaf = Path(identity.replace("\\", "/")).name
+    return f"{prefixes[0]}{leaf}"
+
+
+def identity_prefix_suggestion(concept_type: str | ConceptType | None, identity: str) -> str:
+    suggested = suggested_identity(concept_type, identity) or identity
+    return f"use identity {suggested}"
+
+
+def identity_prefix_mismatch_reject(
+    concept_type: str | ConceptType | None, identity: str
+) -> GateResult:
+    suggested = suggested_identity(concept_type, identity) or identity
+    return GateResult(
+        accepted=False,
+        tighten=[IDENTITY_PREFIX_MISMATCH],
+        suggestions=[identity_prefix_suggestion(concept_type, identity)],
+        reasons=[f"authored type requires identity under {suggested.rsplit('/', 1)[0]}/"],
+    )
+
+
+def identity_prefix_warnings(concepts: list[ConceptDocument]) -> list[dict]:
+    warnings: list[dict] = []
+    for doc in concepts:
+        if identity_prefix_ok(doc.frontmatter.type, doc.identity):
+            continue
+        suggested = suggested_identity(doc.frontmatter.type, doc.identity)
+        warnings.append(
+            {
+                "concept": doc.identity,
+                "type": type_str(doc.frontmatter.type),
+                "suggested": suggested,
+            }
+        )
+    return warnings
 
 
 @dataclass
