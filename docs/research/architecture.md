@@ -1,14 +1,13 @@
 # RepoCodex System Design and Architecture
 
 **Status:** Revision 2.1 — canonical spec (supersedes the 24 Aug 2026 revision; see git history)
-**Date:** 25 August 2026 (amended 25 August 2026 after V1 implementation review)
-**Related:** [architecture-delta.md](architecture-delta.md) (delta of the original PDF draft vs Revision 1; historical)
+**Date:** 25 August 2026
 
-Revision 2.1 amends Revision 2 in place after a review of the V1 implementation found two contradictions inside this document. §5.3 promised that a declared `claims` literal changing from `3` to `1` "breaks the match" while §6.2 classified all partial term loss as non-blocking WEAK; the liveness rule now names `CLAIM_BROKEN` as a separate class (§6.2). §11.3 stated a closed set of required-check failures that omitted the CONTRADICTION blocking §13.3 and §15 require; the set is now enumerated once and includes it. §15 and §18 also state explicitly what was previously implicit about determinism inputs and regex dialect portability. Nothing else in Revision 2 changed. See `openspec/changes/fix-repocodex-v1-review-gaps/`.
+Revision 2.1 amends Revision 2 in place after an implementation review found two contradictions inside this document. §5.3 promised that a declared `claims` literal changing from `3` to `1` "breaks the match" while §6.2 classified all partial term loss as non-blocking WEAK; the liveness rule now names `CLAIM_BROKEN` as a separate class (§6.2). §11.3 stated a closed set of required-check failures that omitted the CONTRADICTION blocking §13.3 and §15 require; the set is now enumerated once and includes it. §15 and §18 also state explicitly what was previously implicit about determinism inputs and regex dialect portability. Nothing else in Revision 2 changed. See `openspec/changes/fix-repocodex-v1-review-gaps/`.
 
 RepoCodex is an open-source, repository-native **executable memory** framework for autonomous coding agents and code-review agents. It stores _why code exists_ next to the code, proves each record is about live text with a deterministic attester, and serves scoped context and impact to agents through skills, a CLI, and an optional MCP wrapper.
 
-Revision 2 replaces the AST/SCIP linking layer of Revision 1 with **textual anchors attested by ripgrep** plus **agentic retrieval and impact**. The change follows from a decomposition of what the AST layer actually did (three jobs: retrieval, impact, liveness) and the finding that only liveness needs determinism — and determinism does not need syntax trees. Every design break identified in self-validation of this approach is solved **in V1**. Nothing in this document is deferred to a later version.
+Revision 2.1 uses **textual anchors attested by ripgrep** plus **agentic retrieval and impact**. That design landed in Revision 2, which replaced the AST/SCIP linking layer of Revision 1. The change follows from a decomposition of what the AST layer actually did (three jobs: retrieval, impact, liveness) and the finding that only liveness needs determinism — and determinism does not need syntax trees. Every design break identified in self-validation of this approach is solved **in Revision 2.1**. Nothing in this document is deferred to a later version.
 
 ---
 
@@ -22,7 +21,7 @@ RepoCodex is one stored graph, one link discipline, and one convention for readi
 - **Anchors — the link to code:** every concept pins one or more code locations with a set of **distinctive textual terms**. A concept cannot be written unless its anchors match, and drift is detected deterministically by ripgrep — no LLM, no API key, no parser toolchain, same answer in IDE and CI.
 - **Agentic code understanding (nothing persisted):** there is no code graph. The code side is the live source text itself; coding agents understand it the way they already do — grep, glob, iterative reads — guided by skill recipes and a committed reverse index (`path → concepts`). Impact analysis is an agent recipe over those primitives, advisory by design.
 
-**Audience:** autonomous coding agents first; code-review agents on the same interfaces. Developers are not in the hot path, but V1 ships an explicit human escape hatch because production repos have hotfixes and human PRs.
+**Audience:** autonomous coding agents first; code-review agents on the same interfaces. Developers are not in the hot path, but Revision 2.1 ships an explicit human escape hatch because production repos have hotfixes and human PRs.
 
 **Positioning:** git-native memory that agents write, attest, and query — not a code-search engine, not another `AGENTS.md` (the deterministic liveness guarantee is the difference), not a static-analysis replacement.
 
@@ -99,7 +98,7 @@ An anchor is a claim that a set of distinctive terms co-occurs at a pinned locat
 
 ```yaml
 verification:
-  engine: ripgrep # required engine in V1; field is extensible by design
+  engine: ripgrep # required engine in Revision 2.1; field is extensible by design
   anchors:
     - path: src/billing/PaymentGateway.ts
       all_of: ["ENTERPRISE", "grace", "= 3"]
@@ -111,7 +110,7 @@ verification:
 Rules of the format:
 
 - `all_of` entries are fixed strings or ripgrep regexes. Terms are matched as tokens, **not** as an exact source line, so formatters cannot break an anchor.
-- `near` + `scope_lines` express weak structure ("`yield` within 40 lines of `def iter_batches`") in pure text. This is the V1 answer to structural claims; it is deliberately weaker than AST and honestly labeled as such (§17).
+- `near` + `scope_lines` express weak structure ("`yield` within 40 lines of `def iter_batches`") in pure text. This is the Revision 2.1 answer to structural claims; it is deliberately weaker than AST and honestly labeled as such (§17).
 - `min_match` (N-of-M) makes single-term renames degrade a match instead of breaking it: LIVE requires ≥ `min_match` hits, DRIFT requires a full miss, anything between is reported as `WEAK` in validate output and queued for opportunistic tightening. Default is all-of.
 - Multiple anchors per concept are first-class; each attests independently (workflows, §13.1).
 
@@ -123,9 +122,9 @@ There is **no stored term database and no code index**. Terms live only in the f
 
 ### 4.4 What replaced the code graph
 
-Nothing is persisted. Revision 1 stacked two stored layers — a code graph ("Layer 1", Tree-sitter/SCIP in a sqlite cache) beneath the intent graph ("Layer 2") — and connected them with virtual edges. Revision 2 keeps only the intent graph, so the layer numbering is retired. The three jobs the old code graph performed are reassigned:
+Nothing is persisted. Revision 1 stacked two stored layers — a code graph ("Layer 1", Tree-sitter/SCIP in a sqlite cache) beneath the intent graph ("Layer 2") — and connected them with virtual edges. Revision 2.1 keeps only the intent graph, so the layer numbering is retired. The three jobs the old code graph performed are reassigned:
 
-| Job                   | Revision 1 (AST/SCIP)                             | Revision 2                                                                       |
+| Job                   | Revision 1 (AST/SCIP)                             | Revision 2.1                                                                     |
 | --------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------- |
 | Retrieval routing     | Virtual edges in sqlite                           | Reverse index lookup + staged reads (§7). Deterministic.                         |
 | Impact / blast radius | SCIP when fresh (rare), name heuristics otherwise | Agent recipe: grep changed symbols, read hits, walk intent links (§8). Advisory. |
@@ -331,12 +330,12 @@ This is a skill recipe over file reads — no server required. The optional MCP 
 
 ## 8. Impact: an agent recipe with a determinism split
 
-Blast radius has two halves with different natures, and V1 treats them differently:
+Blast radius has two halves with different natures, and Revision 2.1 treats them differently:
 
 - **Intent-side (deterministic):** changed files → reverse index → concepts → OKF links → other pinned paths. Pure file reads. The engine computes this and includes `impacted_scenarios` in every validate output.
 - **Code-side (judgment):** grep changed symbol names repo-wide, rank hits by path proximity and test-file status, read the plausible callers, filter with judgment. This is what coding agents already do; the skill makes it a required step of the loop and bounds it: caps on files read per walk, hit-ranking before reading, excluded paths respected.
 
-**Enforcement split (a V1 rule, not a preference):** the code-side walk is nondeterministic — two runs can surface different caller sets — so its findings post to the **advisory review check only**. The required CI check contains nothing an agent judged. This is what keeps the required check reproducible and therefore alive (§12).
+**Enforcement split (a Revision 2.1 rule, not a preference):** the code-side walk is nondeterministic — two runs can surface different caller sets — so its findings post to the **advisory review check only**. The required CI check contains nothing an agent judged. This is what keeps the required check reproducible and therefore alive (§12).
 
 Both coding and review skills must run the impact recipe on every diff. Missed impact is a skipped recipe step, and the review agent flags it.
 
@@ -466,9 +465,9 @@ Entry 2 is new in Revision 2.1. Entry 5 previously appeared only in §13.3 and �
 
 A skill that says "please write memory" will be skipped. MCP cannot force a call. `git commit --no-verify` exists. Therefore `repocodex install` ships all of: engine re-attest on every validate/pre-commit; stop/commit deny on DRIFT (hook filters `git commit` inside the hook body); the required deterministic CI check; and the advisory review agent. There is no design in which any single mechanism suffices.
 
-### 12.2 Brownfield rollout — part of V1, as postures not versions
+### 12.2 Brownfield rollout — part of Revision 2.1, as postures not versions
 
-A required check that denies every pin-breakage in a repo with zero coverage gets its requirement removed within a week, taking the whole guarantee with it. V1 therefore ships three **rollout postures** of the same complete product (nothing is a future version; posture is a config flag). First-touch skipped-memory is blocking from day one — whether a pinning concept was written is deterministic. Drift and `CLAIM_BROKEN` stay non-blocking in `shadow` so false-drift can still be measured before those denies go live:
+A required check that denies every pin-breakage in a repo with zero coverage gets its requirement removed within a week, taking the whole guarantee with it. Revision 2.1 therefore ships three **rollout postures** of the same complete product (nothing is a future version; posture is a config flag). First-touch skipped-memory is blocking from day one — whether a pinning concept was written is deterministic. Drift and `CLAIM_BROKEN` stay non-blocking in `shadow` so false-drift can still be measured before those denies go live:
 
 | Posture   | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -517,7 +516,7 @@ New state must pass the gate; why-changes `supersede` (never clobber) and requir
 
 ### 14.2 Attested-but-wrong memory (treated as a first-class threat)
 
-An anchor proves anchoring, not truth — and wrong institutional memory is worse than none, because agents obey it. V1 ships three countermeasures, none deferred:
+An anchor proves anchoring, not truth — and wrong institutional memory is worse than none, because agents obey it. Revision 2.1 ships three countermeasures, none deferred:
 
 1. **Write-time truth check:** the review agent verifies a new concept's prose against the originating diff while both are in context. This is the only cheap moment to check truth; the skill makes it mandatory for every new concept in a PR.
 2. **Provenance-weighted retrieval:** concepts citing `sources` (commit, PR, incident) rank above bare narrative; bootstrap-mined concepts require `sources` and expire via `stale_after` unless re-attested.
@@ -552,16 +551,16 @@ One concept per why, not per edit; update in place when the why is unchanged. `s
 
 ---
 
-## 17. Known design breaks and their V1 solutions
+## 17. Known design breaks and their Revision 2.1 solutions
 
-This design was self-validated the same way Revision 1 was. Every break found is solved in V1; the residual risks are named honestly.
+This design was self-validated the same way Revision 1 was. Every break found is solved in Revision 2.1; the residual risks are named honestly.
 
-| #   | Design break                                                                                                                                                                                      | V1 solution                                                                                                                                                                                                                                                                                            | Residual risk                                                                                                                                                                                             |
+| #   | Design break                                                                                                                                                                                      | Revision 2.1 solution                                                                                                                                                                                                                                                                                  | Residual risk                                                                                                                                                                                             |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Pure-agentic liveness is self-serving: the validator and the party motivated to proceed are the same model. Memory would rot silently and the system would degenerate into a fancier `AGENTS.md`. | Liveness is never agentic. The deterministic rg attester runs in hook and required CI with no model (§6, §10). Agents only enter on RECONCILE.                                                                                                                                                         | None — this is the load-bearing invariant of the whole design.                                                                                                                                            |
 | 2   | Rename-heavy refactors cause drift storms: a grep term breaks where an AST metavariable survived.                                                                                                 | Stable-token preference enforced and ranked by the write gate (string literals, error messages, enums, thresholds over identifiers); N-of-M `min_match` so single-term loss degrades to WEAK instead of DRIFT; deterministic relocation via `git diff -M` + pickaxe before anyone is paged (§6.1–6.2). | Residual false-drift rate is unknown until measured — the shadow posture exists to quantify it before enforcement (§12.2).                                                                                |
 | 3   | Agentic impact is nondeterministic and would make the required check flaky, triggering its removal.                                                                                               | Determinism split (§8, §11.3): required CI contains only rg-attest liveness, the file-level ratchet, and index sync. All judgment findings post to the separate advisory review check.                                                                                                                 | Advisory findings can be ignored; the ratchet and DRIFT rules still hold the floor.                                                                                                                       |
-| 4   | Token cost moves from a one-time index to every query; monorepo symbol greps can explode.                                                                                                         | Bounded recipe: hit ranking by path proximity and test status, per-walk read caps, exclusion lists; intent-side impact answered deterministically by the reverse index at zero inference cost; tokens-per-turn instrumented in shadow posture (§8, §16).                                               | If a specific repo's measured cost is unacceptable, that repo needs more than V1 offers; the `verification.engine` field is extensible for such deployments, but no AST engine is part of this design.    |
+| 4   | Token cost moves from a one-time index to every query; monorepo symbol greps can explode.                                                                                                         | Bounded recipe: hit ranking by path proximity and test status, per-walk read caps, exclusion lists; intent-side impact answered deterministically by the reverse index at zero inference cost; tokens-per-turn instrumented in shadow posture (§8, §16).                                               | If a specific repo's measured cost is unacceptable, that repo needs more than Revision 2.1 offers; the `verification.engine` field is extensible for such deployments, but no AST engine is part of this design.    |
 | 5   | Structural claims lose expressiveness: token sets cannot say "inside this function" or "wrapped by this lock."                                                                                    | `near` + `scope_lines` express proximity structure in pure text (§4.2); the write gate still requires a distinctive construct from the why. Honest floor: anchors prove presence of the why's key tokens near the right place, not code shape.                                                         | Genuinely structural invariants are weaker than an AST witness would be. Noted plainly; the Revision 1 AST examples for exactly these cases were themselves broken, so the practical regression is small. |
 | 6   | Anchor gaming replaces witness gaming: trivially-satisfied terms are the new tautological `def foo`.                                                                                              | The tightness gate ports to text where it is easier to pass honestly and to enforce: distinctiveness ceilings with reported term counts, in-file uniqueness, path-only rejection, structured `claims` that must be anchored (§6.1).                                                                    | Determined gaming plus prose that states no checkable facts remains containable only by supersede/churn/review-agent pressure (§14.1) — same as Revision 1.                                               |
 | 7   | No persisted graph means batch tools (GC, dashboards, contradiction sweeps) lose their store.                                                                                                     | The committed reverse index answers path→concept deterministically; batch jobs rg over `.context/` frontmatter, which is small; `repocodex audit` is the scheduled home for sweeps (§4.3, §14).                                                                                                        | None significant — these are batch paths.                                                                                                                                                                 |
@@ -571,7 +570,7 @@ This design was self-validated the same way Revision 1 was. Every break found is
 | 11  | Brownfield rollout: a required check red on every PR gets unrequired, collapsing the guarantee.                                                                                                   | First-touch skipped-memory on uncovered eligible files (blocking even in `shadow`), skip list for lockfiles/gitignore-class paths, bootstrap seeding, human escape hatch with audit and self-healing follow-up (§12). Drift/`CLAIM_BROKEN` stay non-blocking in `shadow` so false-drift can still be measured. | An org can still refuse branch protection; no design survives that, and the doc does not claim otherwise.                                                                                                 |
 | 12  | Humans are outside the design but inside the required check (hotfixes, human PRs, dependabot).                                                                                                    | `memory-exempt` governed override + `repocodex repair` one-command flow + follow-up repair tasks (§12.3). Dependency-bot PRs touch lockfiles, not covered source, and pass the ratchet untouched by construction.                                                                                      | Exemption abuse is visible in `log.md` and flagged by the review agent, but not physically preventable.                                                                                                   |
 
-### 17.1 Breaks found in the V1 implementation review (Revision 2.1)
+### 17.1 Breaks found in the implementation review
 
 The rows above were found by self-validating the design. These four were found by validating the **implementation** against the design, and three of them trace to this document under-specifying scope rather than to coding error. They are recorded here because the same omissions would recur in any reimplementation.
 
@@ -582,11 +581,11 @@ The rows above were found by self-validating the design. These four were found b
 | 15  | Determinism inputs were unstated, so ambient state leaked into verdicts: a distinctiveness ceiling derived from a filesystem walk moved when `node_modules` appeared, generated identities used a process-seeded hash, relocation ignored the caller's diff scope, and the version pin was reported rather than enforced. | Verdicts depend only on tracked, non-excluded contents plus the requested diff scope; pins are enforced (§15).                 | Environment-specific ripgrep builds remain a theoretical divergence; the pin bounds it.                                        |
 | 16  | The required check's failure set read as closed in §11.3 while §13.3 and §15 required a further blocking reason, so an implementation could satisfy one passage and violate the other. Separately, CONTRADICTION fired on merely-differing claims, producing false blocks.                                                | One enumerated set in §11.3; contradiction requires a shared claim subject (§13.3).                                            | Enumeration must be maintained as a spec change; that is the point of stating it once.                                         |
 
-### 17.1 continued — breaks found in the v1-review-gaps implementation (Revision 2.2)
+### 17.1 continued — further implementation review
 
 These were found by probing the running engine after `fix-repocodex-v1-review-gaps`, not by re-reading that change's specs.
 
-| #   | Design break                                                                                                                                  | Revision 2.2 solution                                                                                                                                  | Residual risk                                                                                                                                                                             |
+| #   | Design break                                                                                                                                  | Revision 2.1 solution                                                                                                                                  | Residual risk                                                                                                                                                                             |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 17  | Claims were evaluated conjunctively across every anchor, so a `BusinessWorkflow` could not carry a claim that holds at only one site.         | Each claim declares an owning `anchor` index and is evaluated against that anchor alone (§5.3, §6.1).                                                  | Reordering anchors by hand re-points a positional owner; the write gate re-evaluates on the next write.                                                                                   |
 | 18  | A LIVE anchor discharged skipped-memory for the whole file, so appending new behavior to a covered file passed the ratchet.                   | Discharge requires a pinning-concept edit or that every substantive hunk fall inside a matched region (§11.1, §11.3, §12.2). Unattributable hunks arm. | Region arithmetic can misattribute overlapping hunks; false blocks are recoverable by writing memory.                                                                                     |
@@ -610,7 +609,7 @@ Until that bundle exists, the OKF-loop capability reports `unsatisfied` with rea
 
 ---
 
-## 18. Implementation stack (V1)
+## 18. Implementation stack (Revision 2.1)
 
 | Piece         | Choice                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -628,9 +627,9 @@ Language coverage is **anything grep-able**: all programming languages, SQL, YAM
 
 ---
 
-## 19. V1 deliverables
+## 19. Revision 2.1 deliverables
 
-All of the following ship in V1. Rollout postures (§12.2) are configuration, not future versions.
+All of the following ship in Revision 2.1. Rollout postures (§12.2) are configuration, not future versions.
 
 - `.context/` OKF v0.2 bundle: `index.md`, `log.md`, reverse index outside the bundle, sharding convention
 - Concept types: TechnicalDecision, InvariantContract, BusinessWorkflow (multi-anchor), GuardrailDecision
@@ -673,9 +672,7 @@ Explicitly **not in this design** (removed, not postponed): persisted code graph
 
 ## 21. Document control
 
-| Document                                       | Role                                                                                                                                                                                                                                                                               |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| This file (Revision 2, 25 Aug 2026)            | Canonical architecture for implementation                                                                                                                                                                                                                                          |
-| Revision 1 (24 Aug 2026)                       | Superseded; retrievable from git history. Its AST/SCIP linking layer was removed after self-validation (witness-authoring ergonomics, toolchain surface, language allowlist); its OKF store, gate/attester discipline, unskippable loop, and containment mechanisms carry forward. |
-| [architecture-delta.md](architecture-delta.md) | Historical: delta of the original PDF draft vs Revision 1                                                                                                                                                                                                                          |
-| Original PDF in `docs/`                        | Historical draft only                                                                                                                                                                                                                                                              |
+| Document                            | Role                                                                                                                                                                                                                                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| This file (Revision 2.1)            | Canonical architecture for implementation                                                                                                                                                                                                                                          |
+| Revision 1 (24 Aug 2026)            | Superseded; retrievable from git history. Its AST/SCIP linking layer was removed after self-validation (witness-authoring ergonomics, toolchain surface, language allowlist); its OKF store, gate/attester discipline, unskippable loop, and containment mechanisms carry forward. |
