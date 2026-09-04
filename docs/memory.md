@@ -18,8 +18,8 @@ The reverse index is **not** a concept and is **not** in the bundle. It is gener
 ## Opening a concept
 
 1. **Read the body as why.** The markdown after the frontmatter is the payload: why this decision, invariant, workflow, or guardrail exists.
-2. **Note `type`.** RepoCodex authors `TechnicalDecision`, `InvariantContract`, `BusinessWorkflow`, and `GuardrailDecision`. Unknown types are still concepts; they load. Unanchored pages (no `verification`) are valid knowledge; they are not reverse-indexed and do not arm the pin check.
-3. **Follow anchors to code.** When the concept pins live text, `verification.anchors` lists paths and distinctive terms. Open those files. `claims` (when present) are checkable literals that must appear in the owning anchor's matched region.
+2. **Note `type`.** RepoCodex authors `TechnicalDecision`, `InvariantContract`, `BusinessWorkflow`, and `GuardrailDecision`. `type` is **author intent** (catalog), not a closed engine enum. The four types are orthogonal: one change may carry more than one when each page is a distinct why. `InvariantContract` is a must-hold **token** contract and requires `claims` — not a general structural invariant. Unknown types are still concepts; they load. Unanchored pages (no `verification`) are valid knowledge; they are not reverse-indexed and do not arm the pin check.
+3. **Follow anchors to code.** When the concept pins live text, `verification.anchors` lists paths and distinctive terms. Open those files. `claims` (when present) are checkable literals that must appear in the owning anchor's matched region; absence at validate time is `CLAIM_BROKEN`.
 4. **Follow markdown links for related why.** Links between concept files are the graph. Retrieval returns one hop of titles; open a linked body only if the edit might touch that scenario.
 
 `verification.anchors` and `claims` are RepoCodex extensions on the same why document. The memory unit is not `type: Attested Computation`.

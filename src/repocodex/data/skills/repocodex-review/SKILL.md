@@ -24,5 +24,12 @@ Findings from this skill post to the **advisory** check only. Never fail the req
    - workflow pages whose multi-package pins were touched without the page being considered
    - `memory-exempt` without review acknowledgment
    - `uncovered_file_without_memory` (and other skipped-memory first-touch misses) — missing pinning concept; advisory only
+   - `InvariantContract` missing `claims`
+   - contractual token (numeric threshold, plan enum, contract error string) in a `TechnicalDecision` body with no `claims`
+   - `GuardrailDecision` whose only anchors are application source, not enforcement config
+   - thick single-package page typed as `BusinessWorkflow`
+   - multiple new pages for the **same** why
 
-5. Post all of the above to the advisory check. Do not block merge yourself.
+5. Do **not** flag a PR solely because it adds more than one concept type when the bodies are distinct whys. Types are independent and may coexist in one change.
+
+6. Post all of the above to the advisory check. Do not block merge yourself.

@@ -184,10 +184,12 @@ RepoCodex extensions (OKF allows unknown keys; consumers must preserve them):
 
 ### 5.3 Concept types
 
-- **TechnicalDecision** — narrative why bound to code. Must anchor at least one distinctive construct from the why (the term `yield`, an error string), not just a name.
-- **InvariantContract** — a must-still-hold claim. Declared `claims` literals are frozen into anchors and re-checked on every validation as `CLAIM_BROKEN` when absent from the matched region (§6.2), so changing `3 → 1` is a blocking business-rule change rather than a WEAK term-count miss. Each claim names the anchor that owns it via an optional `anchor` index into `verification.anchors` (alongside `literal` and `subject`); omitted owners resolve to the sole anchor, or to the single anchor whose `all_of` declares the literal, and are rejected when ambiguous. The claim is evaluated against that owning anchor alone.
-- **BusinessWorkflow** — a cross-package flow with one anchor per participating site (§13.1). Kept thin: ordering, boundaries, links to per-step pages. A claim on a workflow is owned by one of those sites, not required to hold at every site.
-- **GuardrailDecision** — the why behind a negative/global architectural rule, anchored to the **enforcement config** of the tool that enforces it (§13.3).
+These types are **orthogonal**. One change MAY add or update more than one when each page is a distinct why. Do not invent a type that does not apply. One concept per why — not per file.
+
+- **TechnicalDecision** — narrative why bound to code. Must anchor at least one distinctive construct from the why (the term `yield`, an error string), not just a name. Default coverage type when first-touch needs a pin and no other why applies.
+- **InvariantContract** — a must-hold **token** contract (threshold, enum, contract error string), not a general structural invariant. Declared `claims` literals are frozen into anchors and re-checked on every validation as `CLAIM_BROKEN` when absent from the matched region (§6.2), so changing `3 → 1` is a blocking business-rule change rather than a WEAK term-count miss. An `InvariantContract` write **requires** at least one claim. Each claim names the anchor that owns it via an optional `anchor` index into `verification.anchors` (alongside `literal` and `subject`); omitted owners resolve to the sole anchor, or to the single anchor whose `all_of` declares the literal, and are rejected when ambiguous. The claim is evaluated against that owning anchor alone. Structural shape claims remain weaker than AST (§17 row 5).
+- **BusinessWorkflow** — a cross-package flow with one anchor per participating site (§13.1). Kept thin: ordering, boundaries, links to per-step pages. A claim on a workflow is owned by one of those sites, not required to hold at every site. Coexists with per-step decisions and invariants.
+- **GuardrailDecision** — the why behind a negative/global architectural rule, anchored to the **enforcement config** of the tool that enforces it (§13.3). Coexists with decisions that explain complying implementations.
 
 All pinning types require passing anchors at write time. Unanchored pages (unknown or narrative `type` values without `verification`) are valid OKF concepts: they load, retrieve via links, and do not enter the reverse index or arm skipped-memory.
 

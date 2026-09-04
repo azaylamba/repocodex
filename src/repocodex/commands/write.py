@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from repocodex.config import load_config
-from repocodex.engine.gate import GateResult, evaluate_write
+from repocodex.engine.gate import (
+    GateResult,
+    claims_required_reject,
+    evaluate_write,
+    missing_invariant_claims,
+)
 from repocodex.schema import (
     ConceptStatus,
     envelope,
@@ -92,6 +97,9 @@ def write_memory(
                 }
             )
         deprecate_concept(repo, doc.frontmatter.supersedes, reason=f"superseded by {ident}")
+
+    if missing_invariant_claims(doc):
+        return envelope(claims_required_reject().to_json())
 
     if doc.anchors:
         gate = evaluate_write(doc, config)

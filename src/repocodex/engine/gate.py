@@ -16,7 +16,7 @@ from repocodex.engine.match import (
     read_pinned,
     resolve_claim_owner,
 )
-from repocodex.schema import ConceptDocument
+from repocodex.schema import ConceptDocument, ConceptType
 from repocodex.tools.git import git_check_ignore
 from repocodex.tools.ripgrep import rg_count, run_rg
 
@@ -25,6 +25,24 @@ SUGGESTIONS = [
     "use a string literal, user-facing error message, enum value, or numeric threshold",
     "prefer stable tokens over renameable identifiers",
 ]
+
+CLAIMS_REQUIRED_REASON = "InvariantContract requires at least one claims entry"
+CLAIMS_REQUIRED_SUGGESTION = (
+    "declare claims with frozen literals (thresholds, enums, contract error strings)"
+)
+
+
+def missing_invariant_claims(doc: ConceptDocument) -> bool:
+    return doc.frontmatter.type == ConceptType.InvariantContract.value and not doc.frontmatter.claims
+
+
+def claims_required_reject() -> GateResult:
+    return GateResult(
+        accepted=False,
+        tighten=["claims_required"],
+        suggestions=[CLAIMS_REQUIRED_SUGGESTION],
+        reasons=[CLAIMS_REQUIRED_REASON],
+    )
 
 
 @dataclass
@@ -158,6 +176,10 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
             tighten.append("not_distinctive")
             reasons.append(f"import-line terms only for {anchor.path}")
 
+    if missing_invariant_claims(doc):
+        tighten.append("claims_required")
+        reasons.append(CLAIMS_REQUIRED_REASON)
+
     if doc.frontmatter.claims:
         for claim in doc.frontmatter.claims:
             owner, error = resolve_claim_owner(claim, doc.anchors)
@@ -201,6 +223,11 @@ def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
     if "regex_dialect" in tighten:
         suggestions = [
             "use a fixed-string stable token instead of a dialect-specific regex",
+            *suggestions,
+        ]
+    if "claims_required" in tighten:
+        suggestions = [
+            CLAIMS_REQUIRED_SUGGESTION,
             *suggestions,
         ]
     return GateResult(

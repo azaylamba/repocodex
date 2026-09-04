@@ -29,12 +29,37 @@ You are working in a repository that uses RepoCodex executable memory.
 
    Outcomes:
    - `LIVE` / `WEAK`: proceed only if `skipped_memory` is empty. WEAK is logged; optionally tighten later.
-   - `WRITE` or non-empty `skipped_memory`: you **must** `repocodex write` a gate-passing concept that pins each listed path, then re-validate. Do not treat `LIVE` as done while `skipped_memory` is populated. Do not finish the turn or commit while `blocking` is true.
+   - `WRITE` or non-empty `skipped_memory`: **before** `repocodex write`, run **all four** type checks in [Choose type](#choose-type-types-are-independent) — write or update every type that applies (not only one `TechnicalDecision`). Then `repocodex write` gate-passing concept(s) that **together** pin each listed path, then re-validate. One concept with multiple anchors may cover several paths that share one why — do not invent one page per path. Do not treat `LIVE` as done while `skipped_memory` is populated. Do not finish the turn or commit while `blocking` is true.
    - `REANCHOR`: apply the emitted anchor patch (engine never mutates the tree). Stage it. `repocodex reconcile --apply-patch '<json>'`.
    - `RECONCILE` / `DRIFT`: you **must** repair in this change via `repocodex write` / `repocodex reconcile`. Do not finish the turn or commit.
+   - `CLAIM_BROKEN`: restore the literal or supersede the concept with `rationale`.
    - Do not finish the turn while `blocking` is true.
 
 5. **Commit** includes `.context/` **and** `.repocodex/reverse-index.md` (plus matching files under `.repocodex/reverse-index/` when shards exist) when you wrote or reanchored memory. Committing `.context/` alone does not include the reverse index. The pre-commit hook denies unrepaired DRIFT and undischarged skipped-memory.
+
+## Choose type (types are independent)
+
+After the code change, run **all four** checks. Write or update **every** type that applies. Do not stop at the first match. Do not invent a type that does not apply. One change MAY update all four when they are distinct whys. Prefer update-in-place or `supersedes` + `rationale` if a matching page already exists.
+
+| When this is true | Type | How |
+| --- | --- | --- |
+| Why this **construct** exists (shape, API, generator vs list, …) | `TechnicalDecision` | Pin a distinctive construct from the why (`yield`, error string), not the function name alone. Path: `decisions/` or package-local. Default **coverage** type when first-touch needs a pin and nothing else applies. |
+| A **verbatim token** must not change silently (threshold, enum, contract error string) — losing it should `CLAIM_BROKEN`, not WEAK | `InvariantContract` | **Requires `claims`** with frozen literals; each literal in owning anchor `all_of` and matched region. Not for structural shape. Path: `invariants/` or package-local. |
+| **Cross-package flow** (order, boundaries) | `BusinessWorkflow` | Thin page: ordering, boundaries, links to step pages. One anchor per participating site. Path: `workflows/`. |
+| Global **do-not** / layering rule with an enforcement tool | `GuardrailDecision` | Pin the **enforcement config** (linter, import-linter, CI), not a complying app file. Path: `decisions/` or `guardrails/`. |
+
+Do not relabel an `InvariantContract` as `TechnicalDecision` to dodge `claims`. Unanchored narrative pages do not discharge `skipped_memory`.
+
+## How many files
+
+- **One concept per why** — not per file, not per `skipped_memory` path.
+- Several paths sharing one why → one page, multiple anchors.
+- Several distinct whys (including all four types) → several pages in the same commit.
+- If retrieved context already covers a why, do not duplicate.
+
+## Example (one change, four types)
+
+A checkout feature may write in the same change: `decisions/…` (why capture streams), `invariants/…` (grace `"3"` + `ENTERPRISE` with `claims`), `workflows/…` (api → billing → ledger), `decisions/…` or `guardrails/…` (domain must not import infra, pin `.importlinter`). Four files because four whys — not because every change must fill every type.
 
 ## Anchor authoring
 

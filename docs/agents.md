@@ -27,7 +27,7 @@ repocodex validate --diff
 | Outcome | What you do |
 | --- | --- |
 | `LIVE` / `WEAK` | Proceed only if `skipped_memory` is empty. WEAK is logged; optionally tighten later. |
-| `WRITE` / non-empty `skipped_memory` | Unfinished turn. `repocodex write` a gate-passing concept pinning each listed path, then re-validate. Do not finish or commit while `blocking` is true. |
+| `WRITE` / non-empty `skipped_memory` | Unfinished turn. Run all four type checks (see the coding skill), then `repocodex write` gate-passing concept(s) that together pin each listed path, then re-validate. One concept may pin many paths that share one why. Do not finish or commit while `blocking` is true. |
 | `REANCHOR` | Apply the emitted patch (`repocodex reconcile --apply-patch '<json>'`). The engine never mutates the tree. Stage the result. |
 | `RECONCILE` / `DRIFT` | Repair in this change via `repocodex write` / `repocodex reconcile`. Do not finish the turn or commit. |
 | `CLAIM_BROKEN` | The declared literal no longer holds in the pinned region. Update why or restore the code. |
@@ -45,6 +45,19 @@ When you wrote or reanchored memory, the same commit must include:
 Committing `.context/` alone does not include the reverse index. The required check fails on index desync.
 
 Prefer stable tokens for new anchors: string literals, error messages, enum values, numeric thresholds. Avoid renameable identifiers as the only distinctive term.
+
+## Concept types (summary)
+
+Types are **orthogonal** — one change may write or update more than one when each page is a distinct why. One concept per why (not per file).
+
+| Type | Use when |
+| --- | --- |
+| `TechnicalDecision` | Why this construct exists; default first-touch coverage pin |
+| `InvariantContract` | Must-hold token (threshold/enum/error string); **requires `claims`** |
+| `BusinessWorkflow` | Thin cross-package flow; one anchor per site |
+| `GuardrailDecision` | Global do-not; pin enforcement config, not app source |
+
+The full when/how recipe — including volume and a multi-type example — lives in the installed coding skill (`.cursor/skills/repocodex-coding/SKILL.md` or `.claude/skills/repocodex-coding/SKILL.md` after `repocodex install`). Follow that skill; do not invent a substitute.
 
 ## Humans
 
