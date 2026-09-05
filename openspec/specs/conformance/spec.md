@@ -10,8 +10,6 @@ Keep the why of a change in linked OKF concepts served to agents. Scenario integ
 
 The why of a change or of an implementation SHALL live in an OKF concept — business, technical, or both. A scenario that spans files SHALL be expressed by linking concepts, not by a side table. Correspondence from a code path to the concepts that describe it SHALL be the reverse index, regenerated on accepted writes. An agent about to edit SHALL retrieve those concepts and their linked neighbors through the existing context recipe. No hand-maintained mapping from scenarios to tests SHALL exist, and no human SHALL be required to keep the graph in sync.
 
-Creating RepoCodex’s own bundle is a separate change. Until that bundle exists, this capability applied to RepoCodex itself SHALL report unsatisfied rather than falling back to a table.
-
 #### Scenario: Agent finds why from the path it is about to edit
 
 - **GIVEN** a concept whose anchors pin a source file and whose body states why that code exists
@@ -35,12 +33,11 @@ Creating RepoCodex’s own bundle is a separate change. Until that bundle exists
 - **THEN** the why is captured in a concept in the same change
 - **AND** the skipped-memory ratchet reports the file if that write did not happen
 
-#### Scenario: Bundle absent reports unsatisfied, not a table fallback
+#### Scenario: Missing bundle does not invent a table
 
-- **GIVEN** a repository with no OKF bundle of its own
-- **WHEN** this capability is checked against that repository
-- **THEN** it is reported unsatisfied
-- **AND** no scenario-to-test table is used
+- **GIVEN** a repository with no `.context/` bundle
+- **WHEN** validation runs
+- **THEN** no scenario-to-test table is consulted
 
 ### Requirement: Scenario integrity is judged by reading why and code
 
@@ -70,7 +67,7 @@ Whether a change breaks an existing scenario SHALL be decided by an agent that h
 
 ### Requirement: The required check does not grow a parallel conformance path
 
-Conformance SHALL not introduce blocking reasons, a scenario-to-test table, or a test runner in the required job. When RepoCodex later hosts its own bundle, the same split SHALL apply to it: the engine attests that its why is still pinned; agents read that why and the engine source to judge whether a change breaks a described scenario.
+Conformance SHALL not introduce blocking reasons, a scenario-to-test table, or a test runner in the required job. The engine attests that why is still pinned; agents read that why and the pinned code to judge whether a change breaks a described scenario.
 
 #### Scenario: No new blocking reason
 
@@ -79,9 +76,9 @@ Conformance SHALL not introduce blocking reasons, a scenario-to-test table, or a
 - **THEN** they are a subset of the existing closed set
 - **AND** no reason named `conformance` or `unmapped_scenario` is present
 
-#### Scenario: Table is gone
+#### Scenario: No scenario-to-test table
 
-- **GIVEN** the codebase after this change
+- **GIVEN** the engine package
 - **WHEN** a caller looks up a scenario by name
-- **THEN** `src/repocodex/conformance.py` does not exist
-- **AND** no dictionary maps scenario titles to test function names
+- **THEN** no module maps scenario titles to test function names
+- **AND** the required check does not consult such a table

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Keep why-changes as supersede chains, raise CONTRADICTION only on genuine conflicts, treat attested-but-wrong memory as a first-class threat, and retire unused pages without deleting history. The engine never picks a winner.
+Keep why-changes as supersede chains, raise CONTRADICTION only on genuine conflicts, contain attested-but-wrong memory, and retire unused pages without deleting history. The engine never picks a winner.
 
 ## Requirements
 
@@ -26,9 +26,9 @@ The system SHALL flag CONTRADICTION when overlapping pinned regions carry confli
 - **WHEN** the first validate after the merge runs
 - **THEN** a CONTRADICTION is raised and merge-completion is blocked until an agent resolves it through the gate
 
-### Requirement: Anti-poisoning controls
+### Requirement: Attested-but-wrong memory is contained
 
-The system SHALL treat attested-but-wrong memory as a first-class threat: the review agent verifies new concepts' prose against the originating diff at write time; bootstrap-mined concepts require `sources` and expire via `stale_after` unless re-attested; retrieval is provenance-weighted; and `repocodex audit` periodically samples stable concepts plus their pinned code for model-based contradiction screening whose findings become CONTRADICTION flags — proposals only, resolved through the normal attested-write path, never in the hot path or required check.
+The system SHALL contain attested-but-wrong memory in the engine path: bootstrap-mined concepts require `sources` and expire via `stale_after` unless re-attested; retrieval is provenance-weighted; and `repocodex audit` emits a screening payload of sampled stable concepts plus their pinned regions. Findings supplied back SHALL become CONTRADICTION proposals resolved through the attested-write path. The engine SHALL NOT invoke a model, auto-edit concepts, or put audit findings in the required check.
 
 #### Scenario: Sampling audit surfaces a stale why
 

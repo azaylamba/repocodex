@@ -122,16 +122,16 @@ The system SHALL provide an optional MCP server exposing `get_context`, `get_imp
 - **AND** MCP is not listed as an installed working surface
 - **AND** `ok` is not true solely because an `mcp.json` was copied
 
-### Requirement: Shipped Action installs the pinned engine from git
+### Requirement: Shipped Action installs the pinned engine
 
-The GitHub Action that `repocodex install` writes SHALL install the engine from `git+https://github.com/azaylamba/repocodex.git@v<engine_version>` (or an equivalent git ref that matches the pin). It SHALL still run `repocodex validate --diff --check` as the required job. It SHALL NOT install by querying PyPI for `repocodex==<pin>` until a later change publishes that package.
+The GitHub Action that `repocodex install` writes SHALL install the engine at the `engine_version` pinned in `.repocodex.toml` and SHALL run `repocodex validate --diff --check` as the required job.
 
-#### Scenario: Required job does not hit PyPI
+#### Scenario: Required job uses the pinned engine
 
 - **GIVEN** a repository where `repocodex install` has written `.github/workflows/repocodex.yml` and `.repocodex.toml` with `engine_version = "0.0.1"`
 - **WHEN** the required check job installs the engine
-- **THEN** the install source is the `v0.0.1` git tag on `azaylamba/repocodex`
-- **AND** the job still invokes `repocodex validate` with `--check`
+- **THEN** the installed engine version is `0.0.1`
+- **AND** the job invokes `repocodex validate` with `--check`
 
 ### Requirement: Portable distribution
 

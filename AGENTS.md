@@ -17,7 +17,7 @@ Packaged installables (skills, rules, hooks) live under `src/repocodex/data/`. D
 
 RepoCodex stores git-native *why* next to code and attests attachment with a deterministic pin check (ripgrep + git). Instruction files and test suites do not give that guarantee.
 
-This checkout builds that engine. Audience: coding agents first. Engine pytest pins CLI and attester behavior; it is not how application scenarios are verified. Do not rewrite `docs/architecture.md` as a side effect of a small change; update it when the current system design actually moved. Do not commit `docs/research/design-history.md` or `docs/superpowers/`; both are gitignored local research.
+This checkout builds that engine. Audience: coding agents first. Engine pytest pins CLI and attester behavior; it is not how application scenarios are verified. Do not rewrite `docs/architecture.md` as a side effect of a small change; update it when the current system design actually moved. Do not commit `docs/research/design-history.md`, `docs/superpowers/`, or `openspec/changes/`; those are gitignored local research and proposals.
 
 ## Layout
 
@@ -33,14 +33,14 @@ This checkout builds that engine. Audience: coding agents first. Engine pytest p
 | `src/repocodex/retrieval.py` | Context retrieval |
 | `src/repocodex/mcp_server.py` | Optional MCP wrapper |
 | `tests/` | Engine-package tests |
-| `openspec/` | Behavior specs and changes |
+| `openspec/specs/` | Public engine behavior contract |
 | `docs/` | User-facing and research docs |
 
 ## Rules
 
 - Python 3.11+, src layout. Put `from __future__ import annotations` immediately after the module docstring.
 - Type hints on public APIs; prefer `pathlib.Path`.
-- Public behavior changes go through OpenSpec (`openspec validate --all --strict`). Keep proposal / design / delta specs / tasks aligned.
+- Public engine behavior changes update `openspec/specs/` (`openspec validate --all --strict`). Do not commit `openspec/changes/`.
 - CLI stays JSON-out. The engine path stays deterministic (no model calls in `engine/`).
 - Small focused diffs. No drive-by refactors or whole-tree format.
 - Do not add Python docstrings inside packaged skill markdown under `src/repocodex/data/`.

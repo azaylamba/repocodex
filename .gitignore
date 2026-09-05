@@ -10,8 +10,8 @@ dist/
 .tmpout/
 .tmptest/
 
-# Local OpenSpec change archives (brainstorming history). Do not publish.
-openspec/changes/archive/
+# Local OpenSpec change proposals and archives. Do not publish.
+openspec/changes/
 
 # Local research notes. Do not publish.
 docs/research/design-history.md

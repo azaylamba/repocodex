@@ -62,7 +62,7 @@ The system SHALL classify every stable concept whose pinned paths intersect a di
 
 - **GIVEN** an anchor with three terms and `min_match: 2`
 - **WHEN** a diff renames the identifier matching one term
-- **THEN** the concept is classified WEAK, logged for opportunistic tightening, and no agent is paged
+- **THEN** the concept is classified WEAK, logged for opportunistic tightening, and the verdict is not blocking
 
 #### Scenario: File move re-anchors without paging
 
@@ -254,9 +254,7 @@ The system SHALL normalize anchor paths for exclusion checking by removing a lea
 
 ### Requirement: A claim declares the anchor that owns it
 
-A `claims[]` entry SHALL carry an optional `anchor` field naming the index of the anchor within the concept's `verification.anchors` list that must carry the literal. The write gate SHALL evaluate the claim against that anchor alone, requiring the literal to appear both in that anchor's `all_of` terms and as a token in that anchor's matched region. Validation SHALL report `CLAIM_BROKEN` when the literal is absent from the owning anchor's matched region, and SHALL attribute the finding to that anchor's path. Anchors that do not own a claim SHALL NOT be evaluated against it.
-
-This supersedes the conjunctive evaluation introduced by `fix-repocodex-v1-review-gaps`, under which every claim was required to hold in every anchor's matched region and no multi-anchor concept carrying a claim could be written.
+A `claims[]` entry SHALL carry an optional `anchor` field naming the index of the anchor within the concept's `verification.anchors` list that must carry the literal. The write gate SHALL evaluate the claim against that anchor alone, requiring the literal to appear both in that anchor's `all_of` terms and as a token in that anchor's matched region. Validation SHALL report `CLAIM_BROKEN` when the literal is absent from the owning anchor's matched region, and SHALL attribute the finding to that anchor's path. Anchors that do not own a claim SHALL NOT be evaluated against it. A claim SHALL NOT be required to hold in every anchor's matched region.
 
 #### Scenario: Claim evaluated only against its declared owner
 
