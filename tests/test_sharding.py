@@ -1,3 +1,9 @@
+"""Pin monorepo shard discovery and isolated reverse indexes.
+
+A nested ``packages/*/ .context`` tree must get its own generated reverse
+index under ``.repocodex/reverse-index``, not a leftover file in the shard.
+"""
+
 from __future__ import annotations
 
 from tests.fixtures.repos import GRACE_CONCEPT, init_git_repo, write_architecture_fixtures

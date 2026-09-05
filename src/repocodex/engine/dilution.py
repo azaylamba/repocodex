@@ -1,3 +1,5 @@
+"""Warn when a change copies a stable concept's distinctive terms onto a new path."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,6 +11,7 @@ from repocodex.tools.git import run_git
 
 
 def _diff_text(root: Path, base: str | None, staged: bool) -> str:
+    """Return a unified diff with zero context for the requested tree."""
     args = ["diff", "-U0"]
     if staged:
         args.append("--cached")
@@ -25,6 +28,14 @@ def dilution_warnings(
     base: str | None = None,
     staged: bool = False,
 ) -> list[dict]:
+    """Warn when added lines nearly reproduce a stable concept's unused-path terms.
+
+    Concepts whose pinned paths are in ``changed_files`` are skipped. The
+    concept stays LIVE; this is advisory only.
+
+    Returns:
+        Dicts with ``concept``, ``path``, ``duplicate_terms``, and ``message``.
+    """
     touched = set(changed_files)
     diff = _diff_text(config.root, base, staged)
     added_lines = [
@@ -34,7 +45,8 @@ def dilution_warnings(
         target = config.root / path
         if not target.is_file():
             continue
-        if f"b/{path}" not in diff and f"b/{path.replace('\\', '/')}" not in diff:
+        normalized_path = path.replace("\\", "/")
+        if f"b/{path}" not in diff and f"b/{normalized_path}" not in diff:
             added_lines.extend(target.read_text(encoding="utf-8", errors="replace").splitlines())
     added = "\n".join(added_lines)
     warnings: list[dict] = []

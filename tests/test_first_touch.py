@@ -1,3 +1,9 @@
+"""Pin first-touch skipped_memory rules for uncovered files.
+
+Substantive edits to files without a pinning concept require WRITE. Comments,
+lockfiles, and a successful write discharge do not leave skipped_memory armed.
+"""
+
 from __future__ import annotations
 
 import json

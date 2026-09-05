@@ -1,3 +1,9 @@
+"""Pin store discovery, concept load, and reverse-index sync.
+
+Discover ``.context`` roots while skipping venv and dependency trees. Writing
+a concept updates the catalog, log, and merged reverse index.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

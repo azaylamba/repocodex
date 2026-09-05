@@ -1,3 +1,9 @@
+"""Pin core match, write-gate, and liveness engine behavior.
+
+Cover formatter-tolerant anchors, distinctiveness rejection, claim anchoring,
+marker-only anchors, and WEAK classification on identifier rename.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,3 +1,5 @@
+"""Walk reverse-index seeds and markdown links to find impacted concepts."""
+
 from __future__ import annotations
 
 import re
@@ -9,6 +11,11 @@ LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 
 def resolve_link(from_identity: str, target: str) -> str | None:
+    """Resolve a markdown href to a concept identity relative to ``from_identity``.
+
+    External URLs and in-page fragments return ``None``. A trailing ``.md``
+    suffix is stripped after ``.`` / ``..`` normalization.
+    """
     href = target.strip()
     if href.startswith("http://") or href.startswith("https://") or href.startswith("#"):
         return None
@@ -33,6 +40,7 @@ def resolve_link(from_identity: str, target: str) -> str | None:
 
 
 def linked_identities(doc: ConceptDocument) -> list[str]:
+    """Return unique concept identities linked from ``doc.body``, in order."""
     found: list[str] = []
     for match in LINK_RE.finditer(doc.body):
         identity = resolve_link(doc.identity, match.group(1))
@@ -46,6 +54,11 @@ def intent_impact(
     concepts: list[ConceptDocument],
     reverse_index: dict[str, list[str]],
 ) -> list[str]:
+    """Return concept identities impacted by ``changed_files``.
+
+    Seeds from reverse-index hits, then walks each seed's markdown links and
+    any other concepts that pin the linked documents' paths.
+    """
     by_id = {doc.identity: doc for doc in concepts}
     seeded: list[str] = []
     for path in changed_files:

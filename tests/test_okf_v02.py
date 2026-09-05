@@ -1,3 +1,9 @@
+"""Pin OKF 0.2 bundle conformance for parse, store, and validate.
+
+Cover unknown types, sources and verified shapes, reverse-index location,
+unanchored pages, leftover index desync, and generated-actor rules.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone

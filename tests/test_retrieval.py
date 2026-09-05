@@ -1,3 +1,9 @@
+"""Pin retrieval ranking, draft exclusion, and code-hit caps.
+
+Drafts stay out of default retrieve. Provenance ranks above bare concepts.
+Code-side hits are capped, and churn counts skip ``--follow``.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

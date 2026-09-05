@@ -1,3 +1,9 @@
+"""Pin the CLI ``--help`` surface to the architecture command set.
+
+Help must list validate, write, reconcile, context, repair, install,
+bootstrap, and audit.
+"""
+
 from __future__ import annotations
 
 from tests.conftest import run_cli

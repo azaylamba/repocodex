@@ -1,3 +1,9 @@
+"""Exercise the CLI agent loop from context through commit.
+
+Cover context retrieval, validate, repair, and a no-hook commit, plus payload
+determinism across identical ``validate --all`` runs.
+"""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,9 @@
+"""Pin write-gate claims requirements by concept type.
+
+InvariantContract must declare claims, including unanchored invariants.
+TechnicalDecision may omit claims and still pass the gate.
+"""
+
 from __future__ import annotations
 
 from repocodex.commands.write import write_memory

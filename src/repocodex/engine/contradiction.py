@@ -1,3 +1,5 @@
+"""Detect conflicting claims and competing supersedes among live concepts."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -6,6 +8,12 @@ from repocodex.schema import ConceptDocument, ConceptStatus
 
 
 def overlapping_claim_conflicts(concepts: list[ConceptDocument], root) -> list[dict]:
+    """Flag live concepts that share pins and disagree on a claim subject.
+
+    Returns:
+        CONTRADICTION dicts with ``reason`` ``conflicting_claims``, plus
+        ``left``, ``right``, ``subject``, and shared ``paths``.
+    """
     flags: list[dict] = []
     live = [doc for doc in concepts if doc.status != ConceptStatus.deprecated]
     for i, left in enumerate(live):
@@ -38,6 +46,12 @@ def overlapping_claim_conflicts(concepts: list[ConceptDocument], root) -> list[d
 
 
 def double_supersede_conflicts(concepts: list[ConceptDocument]) -> list[dict]:
+    """Flag a parent that more than one live concept claims to supersede.
+
+    Returns:
+        CONTRADICTION dicts with ``reason`` ``double_supersede``, the
+        ``supersedes`` parent, and the competing ``concepts``.
+    """
     by_parent: dict[str, list[str]] = defaultdict(list)
     for doc in concepts:
         parent = doc.frontmatter.supersedes
@@ -58,4 +72,5 @@ def double_supersede_conflicts(concepts: list[ConceptDocument]) -> list[dict]:
 
 
 def contradiction_flags(concepts: list[ConceptDocument], root) -> list[dict]:
+    """Return overlapping-claim flags followed by double-supersede flags."""
     return overlapping_claim_conflicts(concepts, root) + double_supersede_conflicts(concepts)

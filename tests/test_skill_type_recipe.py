@@ -1,3 +1,10 @@
+"""Pin coding and review skills to the four orthogonal concept types.
+
+Coding skills must teach TechnicalDecision, InvariantContract, BusinessWorkflow,
+and GuardrailDecision as coexisting types. Review skills flag type misuse and
+missing claims, not a single-type or first-match recipe.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

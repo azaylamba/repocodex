@@ -1,3 +1,5 @@
+"""Sample stable concepts for out-of-band screening and retire orphan or expired drafts."""
+
 from __future__ import annotations
 
 import json
@@ -15,6 +17,7 @@ from repocodex.store.reverse_index import merged_index
 
 
 def _expired(stale_after: str | None) -> bool:
+    """Return True when ``stale_after`` parses as a UTC date already past."""
     if not stale_after:
         return False
     try:
@@ -24,6 +27,16 @@ def _expired(stale_after: str | None) -> bool:
 
 
 def gc(repo: Path) -> list[str]:
+    """Deprecate orphan concepts and expired drafts.
+
+    A concept is retired when nothing inbound-links it and no anchor still
+    matches, or when it is a draft past ``stale_after``. Deprecation uses
+    reason ``gc``.
+
+    Returns:
+        Identities that were deprecated.
+
+    """
     retired: list[str] = []
     concepts = load_concepts(repo)
     inbound: set[str] = set()
@@ -53,6 +66,20 @@ def audit(
     seed: int = 0,
     findings_path: Path | None = None,
 ) -> dict:
+    """Emit a screening payload for out-of-band review; never invoke a model.
+
+    Samples stable concepts (all of them when the set is at most ``n``),
+    scores term distinctiveness, flags contradictions, and runs :func:`gc`.
+    Optional ``findings_path`` JSON (a list, or ``findings`` / ``results``)
+    becomes ``CONTRADICTION`` proposals for the attested-write path.
+
+    Returns:
+        Envelope with ``sampled``, ``distinctiveness``, ``weak_anchors``,
+        ``contradictions``, ``contradiction_proposals``, ``gc_deprecated``,
+        ``screening``, ``model_invoked`` always ``False``, ``note``, and
+        ``at``.
+
+    """
     config = load_config(repo)
     concepts = [doc for doc in load_concepts(repo) if doc.status == ConceptStatus.stable]
     n = sample_size or config.audit_sample_size

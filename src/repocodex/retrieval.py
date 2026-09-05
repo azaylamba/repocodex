@@ -1,3 +1,5 @@
+"""Staged concept retrieval: reverse index, ranked bodies, and one link hop."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +12,7 @@ from repocodex.tools.git import run_git
 
 
 def _concept_file(root: Path, identity: str) -> Path | None:
+    """Return the markdown path for ``identity`` if it exists in a context shard."""
     fallback = root / ".context" / f"{identity}.md"
     if fallback.is_file():
         return fallback
@@ -21,6 +24,7 @@ def _concept_file(root: Path, identity: str) -> Path | None:
 
 
 def _churn_count(root: Path, identity: str) -> int:
+    """Count commits that touched the concept file (used to demote noisy pages)."""
     path = _concept_file(root, identity)
     rel = str(path.relative_to(root)).replace("\\", "/") if path else f".context/{identity}.md"
     result = run_git(["rev-list", "--count", "HEAD", "--", rel], cwd=root)
@@ -31,6 +35,7 @@ def _churn_count(root: Path, identity: str) -> int:
 
 
 def rank_score(doc: ConceptDocument, root: Path) -> float:
+    """Score a concept for retrieval: sources, stable, verified, minus git churn."""
     score = 0.0
     if doc.frontmatter.sources:
         score += 100.0
@@ -43,6 +48,7 @@ def rank_score(doc: ConceptDocument, root: Path) -> float:
 
 
 def _catalog_siblings(root: Path, doc: ConceptDocument, selected_ids: set[str]) -> list[dict]:
+    """Parse catalog links from the concept's folder ``index.md``, excluding selected ids."""
     path = _concept_file(root, doc.identity)
     if path is None:
         return []
@@ -80,6 +86,16 @@ def retrieve(
     include_drafts: bool = False,
     include_bodies: bool = True,
 ) -> dict:
+    """Select concepts pinned to ``paths``, ranked, plus related titles.
+
+    Looks up identities in the merged reverse index, drops deprecated
+    (and drafts unless ``include_drafts``), sorts by ``rank_score``, then
+    adds one hop of ``related`` / catalog sibling titles.
+
+    Returns:
+        Envelope-shaped dict with ``paths``, ``concepts``, ``related``,
+        and ``catalog``.
+    """
     concepts = load_concepts(root)
     by_id = {doc.identity: doc for doc in concepts}
     index = merged_index(root)

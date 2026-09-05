@@ -1,3 +1,5 @@
+"""Mine why-comments and commit history into draft TechnicalDecision concepts."""
+
 from __future__ import annotations
 
 import hashlib
@@ -26,22 +28,26 @@ DOC_WHY = re.compile(r"(?i)^(?:why|decision|invariant)\s*[:\-]\s*(.+)$")
 
 
 def _stale_after(days: int = 30) -> str:
+    """Return a UTC ISO date ``days`` from now for draft expiry."""
     when = datetime.now(timezone.utc) + timedelta(days=days)
     return when.date().isoformat()
 
 
 def _stable_id(rel: str, note: str) -> str:
+    """Build a deterministic ``decisions/`` identity from path and note."""
     digest = hashlib.sha256(f"{rel}\n{note}".encode("utf-8")).hexdigest()[:12]
     return f"decisions/{Path(rel).stem}-{digest}"
 
 
 def _commit_for(repo: Path, rel: str) -> str | None:
+    """Return the latest commit SHA that touched ``rel``, if any."""
     result = run_git(["log", "-n", "1", "--pretty=%H", "--", rel], cwd=repo)
     sha = result.stdout.strip()
     return sha or None
 
 
 def _candidates_from_comments(repo: Path, files: list[str]) -> list[tuple[str, str, list[str], str | None]]:
+    """Collect why-comments and markdown decision lines from tracked files."""
     SKIP_SUFFIX = {".py", ".ts", ".js", ".go", ".rs", ".java", ".md"}
     found: list[tuple[str, str, list[str], str | None]] = []
     for rel in files:
@@ -69,6 +75,7 @@ def _candidates_from_comments(repo: Path, files: list[str]) -> list[tuple[str, s
 
 
 def _candidates_from_history(repo: Path) -> list[tuple[str, str, list[str], str | None]]:
+    """Collect why-like subjects from the last 100 commits and their first path."""
     log = run_git(["log", "--pretty=%H%x09%s", "-n", "100"], cwd=repo)
     found: list[tuple[str, str, list[str], str | None]] = []
     for line in log.stdout.splitlines():
@@ -90,6 +97,17 @@ def _candidates_from_history(repo: Path) -> list[tuple[str, str, list[str], str 
 
 
 def bootstrap(repo: Path) -> dict:
+    """Write gate-passing draft decisions mined from comments and history.
+
+    Candidates without an evidencing commit are rejected with
+    ``no_evidencing_source``. Gate failures keep the identity and
+    ``tighten`` list. Successful writes regenerate the reverse index.
+
+    Returns:
+        Envelope with ``kept`` identities, ``rejected`` rows, and
+        ``status`` ``draft``.
+
+    """
     config = load_config(repo)
     kept: list[str] = []
     rejected: list[dict] = []

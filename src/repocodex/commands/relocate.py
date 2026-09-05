@@ -1,3 +1,5 @@
+"""Move concepts whose identity prefix does not match their authored type."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -27,6 +29,7 @@ def _find_concept(repo: Path, identity: str) -> tuple[Path, Path] | None:
 
 
 def _remove_catalog_link(context_root: Path, identity: str) -> None:
+    """Drop the old catalog index line that pointed at this identity."""
     directory = (context_root / identity).parent
     index_path = directory / "index.md"
     if not index_path.exists():
@@ -44,6 +47,20 @@ def relocate_memory(
     *,
     mismatched: bool = False,
 ) -> dict:
+    """Move one concept, or every prefix-mismatched concept, to the typed prefix.
+
+    Requires ``mismatched`` or a specific ``identity``. Already-correct
+    prefixes, unknown types, missing files, and occupied targets are skipped.
+    Successful moves update the catalog, append a relocate log line, and
+    regenerate the reverse index.
+
+    Returns:
+        Envelope with ``moved`` (``from``, ``to``, ``path``) and ``skipped``
+        (``identity``, ``reason``). Skip reasons include ``not_found``,
+        ``identity_or_mismatched_required``, ``not_mismatched``,
+        ``unknown_type``, and ``target_exists``.
+
+    """
     moved: list[dict] = []
     skipped: list[dict] = []
 

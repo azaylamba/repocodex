@@ -1,3 +1,5 @@
+"""Reanchor drifted concepts and rewrite memory through the attested write path."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +12,21 @@ from repocodex.store.reverse_index import regenerate_all
 
 
 def apply_anchor_patch(repo: Path, patch: dict) -> Path:
+    """Apply a ``replace_path`` patch to one concept anchor and regenerate indexes.
+
+    Looks up ``patch["concept"]`` across context roots, updates
+    ``anchors[anchor_index].path`` (and optional ``terms``), writes the
+    concept, and records a ``reconcile`` metric with ``false_drift`` true.
+
+    Returns:
+        Absolute path of the rewritten concept file.
+
+    Raises:
+        FileNotFoundError: If the concept identity is not on disk.
+        KeyError: If required patch keys are missing.
+        IndexError: If ``anchor_index`` is out of range.
+
+    """
     identity = patch["concept"]
     roots = discover_context_roots(repo)
     path = None
@@ -44,6 +61,12 @@ def apply_anchor_patch(repo: Path, patch: dict) -> Path:
 
 
 def reconcile_memory(repo: Path, source: Path | str, *, identity: str | None = None) -> dict:
+    """Write memory via :func:`write_memory` and mark the envelope as reconcile.
+
+    Returns:
+        The write envelope with ``mode`` set to ``reconcile``.
+
+    """
     result = write_memory(repo, source, identity=identity)
     result["mode"] = "reconcile"
     return result

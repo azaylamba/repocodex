@@ -1,3 +1,10 @@
+"""Pin write-time identity prefix rules for typed concepts.
+
+New typed concepts must live under the matching folder. Existing flat identities
+are grandfathered. Validate emits advisory prefix warnings, and relocate moves
+mismatched files when the target is free.
+"""
+
 from __future__ import annotations
 
 from repocodex.commands.relocate import relocate_memory

@@ -1,3 +1,5 @@
+"""Append-only JSONL metrics sink used to track drift and reconcile quality."""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +13,7 @@ DEFAULT_METRICS_REL = ".repocodex/metrics.jsonl"
 
 
 def metrics_path(root: Path) -> Path:
+    """Return the metrics JSONL path, honoring ``REPOCODEX_METRICS_SINK``."""
     override = os.environ.get("REPOCODEX_METRICS_SINK")
     if override:
         path = Path(override)
@@ -23,12 +26,14 @@ def metrics_path(root: Path) -> Path:
 
 
 def record_metric(root: Path, event: str, payload: dict) -> None:
+    """Append one timestamped metric event to the sink."""
     line = {"event": event, "at": utc_now(), **payload}
     with metrics_path(root).open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(line) + "\n")
 
 
 def read_metrics(root: Path) -> list[dict]:
+    """Load recorded events, skipping blank and malformed JSONL lines."""
     path = metrics_path(root)
     if not path.is_file():
         return []
@@ -58,8 +63,11 @@ def false_drift_rate(root: Path) -> float:
 
 
 class Timer:
+    """Wall-clock timer started at construction; ``ms`` returns elapsed milliseconds."""
+
     def __init__(self) -> None:
         self.start = __import__("time").perf_counter()
 
     def ms(self) -> int:
+        """Return milliseconds since this timer was created."""
         return int((__import__("time").perf_counter() - self.start) * 1000)

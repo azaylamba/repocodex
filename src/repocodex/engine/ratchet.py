@@ -1,3 +1,5 @@
+"""Flag substantive file changes that lack a corresponding memory update."""
+
 from __future__ import annotations
 
 import re
@@ -35,6 +37,7 @@ FIRST_TOUCH_SKIP_BASENAMES = frozenset(
 
 
 def _is_comment_line(line: str) -> bool:
+    """Return True when a line is blank or starts with a comment prefix."""
     stripped = line.strip()
     if not stripped:
         return True
@@ -42,11 +45,15 @@ def _is_comment_line(line: str) -> bool:
 
 
 def _lines_are_substantive(removed: list[str], added: list[str]) -> bool:
+    """Return True when added or removed lines change more than comments or whitespace."""
     content = [*removed, *added]
     if not content:
         return False
     if all(not line.strip() for line in content):
         return False
+    # Comment-only diffs are not substantive: they do not change runtime
+    # behavior, so first-touch / skipped_memory must not fire on a comments
+    # or docs-only pass.
     if all(_is_comment_line(line) for line in content):
         return False
     if re.findall(r"\S+", "\n".join(removed)) == re.findall(r"\S+", "\n".join(added)):
@@ -55,6 +62,7 @@ def _lines_are_substantive(removed: list[str], added: list[str]) -> bool:
 
 
 def _untracked_is_substantive(root: Path, path: str) -> bool:
+    """Return True when an untracked file has substantive content."""
     target = root / path
     if not target.is_file():
         return False
@@ -63,6 +71,7 @@ def _untracked_is_substantive(root: Path, path: str) -> bool:
 
 
 def is_substantive_change(root: Path, path: str, *, staged: bool = False, base: str | None = None) -> bool:
+    """Return True when the diff for ``path`` changes more than comments or whitespace."""
     args = ["diff", "-U0", "--", path]
     if staged:
         args = ["diff", "-U0", "--cached", "--", path]
@@ -91,7 +100,7 @@ def changed_line_ranges(
     staged: bool = False,
     base: str | None = None,
 ) -> list[tuple[int, int]] | None:
-    """Return 0-based inclusive (start, end) ranges for `path`, or None if unattributable."""
+    """Return 0-based inclusive (start, end) ranges for ``path``, or None if unattributable."""
     if staged:
         args = ["diff", "-U0", "--cached", "--", path]
     elif base:
@@ -128,6 +137,7 @@ def changed_line_ranges(
 
 
 def _hunks_inside_regions(ranges: list[tuple[int, int]], regions: list) -> bool:
+    """Return True when every changed range lies inside some region."""
     for start, end in ranges:
         if not any(region.start <= start and end <= region.end for region in regions):
             return False
@@ -140,6 +150,7 @@ def _matched_regions_for_path(
     reverse_index: dict[str, list[str]],
     config: RepoConfig,
 ) -> list | None:
+    """Return merged match regions for concepts that pin ``path``."""
     normalized = path.replace("\\", "/")
     identities = reverse_index.get(path) or reverse_index.get(normalized) or []
     by_id = {doc.identity: doc for doc in concepts}
@@ -159,6 +170,7 @@ def _matched_regions_for_path(
 
 
 def _concept_identities_from_paths(paths: list[str], concepts: list[ConceptDocument]) -> set[str]:
+    """Return concept identities whose .context files appear in ``paths``."""
     changed: set[str] = set()
     by_id = {doc.identity: doc for doc in concepts}
     for path in paths:
@@ -185,6 +197,7 @@ def _concept_identities_from_paths(paths: list[str], concepts: list[ConceptDocum
 
 
 def _identities_pinning_path(path: str, concepts: list[ConceptDocument]) -> set[str]:
+    """Return identities that list ``path`` in pinned_paths."""
     normalized = path.replace("\\", "/")
     found: set[str] = set()
     for doc in concepts:
@@ -196,6 +209,7 @@ def _identities_pinning_path(path: str, concepts: list[ConceptDocument]) -> set[
 
 
 def _is_memory_path(normalized: str) -> bool:
+    """Return True when ``normalized`` is a managed memory or skill artefact."""
     # Plugin-managed skill copies live under .repocodex/plugin/, .claude/skills/,
     # and .cursor/skills/.  They are auto-generated artefacts, not source files,
     # so they must not arm first-touch.
@@ -222,6 +236,16 @@ def skipped_memory(
     staged: bool = False,
     base: str | None = None,
 ) -> list[dict]:
+    """Flag substantive changes that have no matching concept update.
+
+    Uncovered files become ``uncovered_file_without_memory``. Covered files
+    whose hunks fall outside existing match regions become
+    ``covered_file_without_memory_update``. Comment-only diffs, exclusions,
+    lockfile basenames, and in-change pinning updates are skipped.
+
+    Returns:
+        Flag dicts with ``path``, ``reason``, and optional ``concepts``.
+    """
     del posture  # first-touch applies in every posture
     covered = {path for path, ids in reverse_index.items() if ids}
     pinning_updated = _concept_identities_from_paths(changed_files, concepts)

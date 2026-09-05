@@ -1,3 +1,9 @@
+"""Pin enforcement posture, exemptions, and install hook contracts.
+
+Cover first-touch on brownfield, ratchet on covered files without memory,
+memory-exempt acknowledgments, supersede contradictions, and CI pin install.
+"""
+
 from __future__ import annotations
 
 import json

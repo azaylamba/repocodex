@@ -1,3 +1,5 @@
+"""Qualify pull-request reviews that carry an explicit RepoCodex ack token."""
+
 from __future__ import annotations
 
 ACK_TOKEN = "repocodex-ack"
@@ -8,7 +10,12 @@ def qualifying_ack_evidence(
     pr_author: str,
     token: str = ACK_TOKEN,
 ) -> str | None:
-    """Return evidence for an approving review by someone other than the PR author."""
+    """Return evidence for an approving review by someone other than the PR author.
+
+    Returns:
+        ``review:{id}`` (or ``review:{login}``) when a non-author APPROVED
+        review body contains ``token``; otherwise ``None``.
+    """
     needle = token.lower()
     author = (pr_author or "").lower()
     for review in reviews:

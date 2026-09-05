@@ -1,3 +1,5 @@
+"""Gate-check and persist a concept through the attested write path."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,11 +30,13 @@ from repocodex.store.reverse_index import regenerate_all
 
 
 def _context_root(repo: Path) -> Path:
+    """Return the first discovered context root, or ``repo/.context``."""
     roots = discover_context_roots(repo)
     return roots[0] if roots else repo / ".context"
 
 
 def _existing_concept_path(repo: Path, identity: str) -> Path | None:
+    """Return the on-disk path for ``identity`` if it already exists."""
     for root in discover_context_roots(repo):
         path = concept_path(root, identity)
         if path.exists():
@@ -41,6 +45,7 @@ def _existing_concept_path(repo: Path, identity: str) -> Path | None:
 
 
 def _why_change_rejected(existing: str | None, incoming, *, identity: str) -> str | None:
+    """Return a reject reason when a stable body change lacks supersedes."""
     if not existing:
         return None
     old = parse_concept(existing, identity)
@@ -61,6 +66,23 @@ def write_memory(
     identity: str | None = None,
     stdin_text: str | None = None,
 ) -> dict:
+    """Parse, gate, and persist a concept, or return a reject envelope.
+
+    Rejects a stable body change without ``supersedes``
+    (``why_change_requires_supersedes``), a supersede without ``rationale``
+    (``rationale_required``), an InvariantContract with no claims
+    (``claims_required``), and a *new* identity whose prefix does not match
+    its type (``identity_prefix_mismatch``). A draft without ``stale_after``
+    is promoted to stable. On accept, writes the concept and regenerates
+    indexes.
+
+    Returns:
+        Envelope with gate keys ``accepted``, ``tighten``, ``term_counts``,
+        ``suggestions``, and ``reasons``. Accept also sets ``identity`` and
+        ``path``. Grandfathered prefix mismatches append a relocate
+        suggestion without rejecting.
+
+    """
     config = load_config(repo)
     if stdin_text is not None:
         text = stdin_text
@@ -108,6 +130,8 @@ def write_memory(
     if not identity_prefix_ok(doc.frontmatter.type, ident):
         if existing_path is None:
             return envelope(identity_prefix_mismatch_reject(doc.frontmatter.type, ident).to_json())
+        # Updating a pre-prefix identity must not force a rename that would
+        # break inbound links; relocate is an explicit follow-up command.
         prefix_suggestion = identity_prefix_suggestion(doc.frontmatter.type, ident)
 
     if doc.anchors:

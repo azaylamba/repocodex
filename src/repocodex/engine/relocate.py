@@ -1,3 +1,5 @@
+"""Find a new path for an anchor that no longer hits its pinned file."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -12,6 +14,8 @@ from repocodex.tools.ripgrep import rg_count, rg_files
 
 @dataclass
 class Relocation:
+    """Candidate paths for moving a missed anchor."""
+
     unique: bool
     via: str
     candidates: list[dict] = field(default_factory=list)
@@ -23,6 +27,7 @@ def parse_renames(
     staged: bool = False,
     base: str | None = None,
 ) -> dict[str, str]:
+    """Return a mapping of old path to new path from git rename detection."""
     args = ["diff", "-M", "--name-status"]
     if staged:
         args.append("--cached")
@@ -38,6 +43,7 @@ def parse_renames(
 
 
 def _most_distinctive_term(anchor: Anchor, config: RepoConfig) -> str:
+    """Return the anchor term with the fewest repo-wide hits."""
     scored: list[tuple[int, str]] = []
     for term in anchor.all_of:
         pattern = term[1:-1] if is_regex_term(term) else term
@@ -59,6 +65,11 @@ def relocate_anchor(
     staged: bool = False,
     base: str | None = None,
 ) -> Relocation:
+    """Find a new path for ``anchor`` via git rename, then pickaxe search.
+
+    A unique rename or a single full-term hit elsewhere is ``unique``.
+    Zero candidates set ``via`` to ``full_miss``.
+    """
     renames = parse_renames(config.root, staged=staged, base=base)
     if anchor.path in renames:
         new_path = renames[anchor.path]

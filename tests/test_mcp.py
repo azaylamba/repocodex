@@ -1,3 +1,9 @@
+"""Pin MCP server tools, plugin packaging, and optional mcp install.
+
+Cover payload shape parity with CLI validate, registered architecture tool
+names, and install behavior when the mcp extra is missing or present.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

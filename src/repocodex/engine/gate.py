@@ -1,3 +1,5 @@
+"""Accept or reject a concept write using local ripgrep counts and file reads."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -43,10 +45,12 @@ IDENTITY_PREFIX_MISMATCH = "identity_prefix_mismatch"
 
 
 def missing_invariant_claims(doc: ConceptDocument) -> bool:
+    """Return True when an InvariantContract has no claims."""
     return doc.frontmatter.type == ConceptType.InvariantContract.value and not doc.frontmatter.claims
 
 
 def claims_required_reject() -> GateResult:
+    """Return a rejecting result for an InvariantContract with no claims."""
     return GateResult(
         accepted=False,
         tighten=["claims_required"],
@@ -56,6 +60,7 @@ def claims_required_reject() -> GateResult:
 
 
 def allowed_prefixes(concept_type: str | ConceptType | None) -> tuple[str, ...] | None:
+    """Return required identity prefixes for an authored type, or None if unrestricted."""
     key = type_str(concept_type) if concept_type is not None else ""
     if not key:
         return None
@@ -63,6 +68,7 @@ def allowed_prefixes(concept_type: str | ConceptType | None) -> tuple[str, ...] 
 
 
 def identity_prefix_ok(concept_type: str | ConceptType | None, identity: str) -> bool:
+    """Return True when ``identity`` sits under a required type folder."""
     prefixes = allowed_prefixes(concept_type)
     if prefixes is None:
         return True
@@ -71,6 +77,7 @@ def identity_prefix_ok(concept_type: str | ConceptType | None, identity: str) ->
 
 
 def suggested_identity(concept_type: str | ConceptType | None, identity: str) -> str | None:
+    """Return the first allowed prefix plus the identity leaf, or None if unrestricted."""
     prefixes = allowed_prefixes(concept_type)
     if prefixes is None:
         return None
@@ -79,6 +86,7 @@ def suggested_identity(concept_type: str | ConceptType | None, identity: str) ->
 
 
 def identity_prefix_suggestion(concept_type: str | ConceptType | None, identity: str) -> str:
+    """Return a human suggestion to move ``identity`` under its type folder."""
     suggested = suggested_identity(concept_type, identity) or identity
     return f"use identity {suggested}"
 
@@ -86,6 +94,7 @@ def identity_prefix_suggestion(concept_type: str | ConceptType | None, identity:
 def identity_prefix_mismatch_reject(
     concept_type: str | ConceptType | None, identity: str
 ) -> GateResult:
+    """Return a rejecting result for a new write whose identity lacks its type folder."""
     suggested = suggested_identity(concept_type, identity) or identity
     return GateResult(
         accepted=False,
@@ -96,6 +105,14 @@ def identity_prefix_mismatch_reject(
 
 
 def identity_prefix_warnings(concepts: list[ConceptDocument]) -> list[dict]:
+    """List existing authored identities that sit outside their type folder.
+
+    Returns:
+        Dicts with ``concept``, ``type``, and ``suggested`` identity.
+    """
+    # Prefix mismatch on an already-written identity is a suggestion, not a
+    # hard reject: failing the write would brick updates to grandfathered
+    # flat pages. New writes still use identity_prefix_mismatch_reject.
     warnings: list[dict] = []
     for doc in concepts:
         if identity_prefix_ok(doc.frontmatter.type, doc.identity):
@@ -113,6 +130,8 @@ def identity_prefix_warnings(concepts: list[ConceptDocument]) -> list[dict]:
 
 @dataclass
 class GateResult:
+    """Accept-or-reject outcome of evaluating a concept write."""
+
     accepted: bool
     tighten: list[str] = field(default_factory=list)
     term_counts: dict[str, int] = field(default_factory=dict)
@@ -120,6 +139,7 @@ class GateResult:
     reasons: list[str] = field(default_factory=list)
 
     def to_json(self) -> dict:
+        """Return this result as a JSON-serializable dict."""
         return {
             "accepted": self.accepted,
             "tighten": self.tighten,
@@ -130,6 +150,7 @@ class GateResult:
 
 
 def path_excluded(path: str, config: RepoConfig) -> bool:
+    """Return True when ``path`` is gitignored or matches a configured exclusion."""
     normalized = normalize_repo_path(path)
     if git_check_ignore(normalized, config.root):
         return True
@@ -137,12 +158,14 @@ def path_excluded(path: str, config: RepoConfig) -> bool:
 
 
 def _term_count(term: str, config: RepoConfig) -> int:
+    """Return the repo-wide ripgrep hit count for a term."""
     fixed = not is_regex_term(term)
     pattern = term[1:-1] if is_regex_term(term) else term
     return rg_count(pattern, config.root, fixed=fixed, exclusions=config.all_exclusions)
 
 
 def _regex_dialects_agree(term: str, root: Path) -> bool:
+    """Return True when Python re and ripgrep both accept the regex."""
     if not is_regex_term(term):
         return True
     pattern = term[1:-1]
@@ -163,6 +186,7 @@ def _regex_dialects_agree(term: str, root: Path) -> bool:
 
 
 def evaluate_write(doc: ConceptDocument, config: RepoConfig) -> GateResult:
+    """Accept a write only when every anchor and claim is locally distinctive."""
     tighten: list[str] = []
     reasons: list[str] = []
     term_counts: dict[str, int] = {}

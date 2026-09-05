@@ -1,3 +1,5 @@
+"""Discover, load, write, and catalog concept pages under ``.context`` shards."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -22,6 +24,7 @@ SKIP_DIRS = {"repair-tasks"}
 
 
 def discover_context_roots(repo: Path) -> list[Path]:
+    """Return ``.context`` directories under ``repo``, shallowest first."""
     roots: list[Path] = []
     for dirpath, dirnames, _filenames in os.walk(repo, topdown=True, followlinks=False):
         dirnames[:] = [name for name in dirnames if name not in SKIP_WALK_DIR_NAMES]
@@ -34,6 +37,10 @@ def discover_context_roots(repo: Path) -> list[Path]:
 
 
 def owning_context_root(repo: Path, pinned_paths: list[str]) -> Path:
+    """Return the deepest shard whose package prefix covers every pinned path.
+
+    With no pins, prefer the repo-root ``.context`` if it exists.
+    """
     repo = repo.resolve()
     roots = discover_context_roots(repo)
     root_bundle = repo / ".context"
@@ -57,6 +64,7 @@ def owning_context_root(repo: Path, pinned_paths: list[str]) -> Path:
 
 
 def concept_files(context_root: Path) -> list[Path]:
+    """Return markdown concept paths under ``context_root``, skipping catalog files."""
     files: list[Path] = []
     for path in sorted(context_root.rglob("*.md")):
         if path.name in RESERVED:
@@ -68,6 +76,7 @@ def concept_files(context_root: Path) -> list[Path]:
 
 
 def load_concepts(repo: Path) -> list[ConceptDocument]:
+    """Parse every typed concept page across all shards in ``repo``."""
     docs: list[ConceptDocument] = []
     for context_root in discover_context_roots(repo):
         for path in concept_files(context_root):
@@ -81,10 +90,12 @@ def load_concepts(repo: Path) -> list[ConceptDocument]:
 
 
 def concept_path(context_root: Path, identity: str) -> Path:
+    """Return the on-disk path for ``identity`` under ``context_root``."""
     return context_root / f"{identity}.md"
 
 
 def ensure_bundle(context_root: Path, okf_version: str = OKF_VERSION) -> None:
+    """Create ``context_root`` with empty ``index.md`` and ``log.md`` if needed."""
     context_root.mkdir(parents=True, exist_ok=True)
     index_path = context_root / "index.md"
     if not index_path.exists():
@@ -98,6 +109,7 @@ def ensure_bundle(context_root: Path, okf_version: str = OKF_VERSION) -> None:
 
 
 def append_log(context_root: Path, message: str) -> None:
+    """Append ``message`` under today's UTC heading in ``log.md``."""
     log_path = context_root / "log.md"
     today = datetime.now(timezone.utc).date().isoformat()
     heading = f"## {today}"
@@ -149,6 +161,7 @@ def append_log(context_root: Path, message: str) -> None:
 
 
 def _catalog_link(doc: ConceptDocument) -> str:
+    """Return a catalog bullet linking to ``doc``."""
     title = doc.frontmatter.title or doc.identity
     name = Path(doc.identity).name
     link = f"- [{title}](./{name}.md)"
@@ -158,6 +171,7 @@ def _catalog_link(doc: ConceptDocument) -> str:
 
 
 def update_catalog(context_root: Path, doc: ConceptDocument) -> None:
+    """Add ``doc`` to its directory ``index.md``, creating parent catalog links."""
     directory = (context_root / doc.identity).parent
     directory.mkdir(parents=True, exist_ok=True)
     index_path = directory / "index.md"
@@ -190,6 +204,7 @@ def write_concept(
     context_root: Path | None = None,
     verified_by: str | None = None,
 ) -> Path:
+    """Serialize ``doc`` into its owning shard and update the catalog and log."""
     del verified_by
     root = context_root or owning_context_root(repo, doc.pinned_paths)
     ensure_bundle(root)
@@ -202,6 +217,7 @@ def write_concept(
 
 
 def deprecate_concept(repo: Path, identity: str, *, reason: str) -> None:
+    """Mark ``identity`` deprecated in every shard that contains it."""
     for context_root in discover_context_roots(repo):
         path = concept_path(context_root, identity)
         if not path.exists():
@@ -213,6 +229,7 @@ def deprecate_concept(repo: Path, identity: str, *, reason: str) -> None:
 
 
 def okf_version(repo: Path) -> str | None:
+    """Return the OKF version from the root bundle index, or None if missing."""
     root = repo / ".context" / "index.md"
     if not root.exists():
         return None
@@ -220,11 +237,17 @@ def okf_version(repo: Path) -> str | None:
 
 
 def format_version(repo: Path) -> str | None:
-    """Deprecated alias; OKF v0.2 uses okf_version."""
+    """Return the bundle OKF version (deprecated alias for okf_version)."""
     return okf_version(repo)
 
 
 def okf_bundle_errors(repo: Path) -> list[dict]:
+    """Return shard errors for illegal extra files or concept pages missing type.
+
+    Returns:
+        Dicts with ``shard``, ``path``, and ``reason``
+        (``illegal_extra_file`` or ``missing_type``).
+    """
     errors: list[dict] = []
     for context_root in discover_context_roots(repo):
         shard = str(context_root.relative_to(repo))

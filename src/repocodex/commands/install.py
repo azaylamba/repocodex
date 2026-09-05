@@ -1,3 +1,5 @@
+"""Copy RepoCodex hooks, skills, rules, and optional MCP config into a repository."""
+
 from __future__ import annotations
 
 import json
@@ -11,16 +13,19 @@ from repocodex.schema import envelope
 
 
 def _data_path(*parts: str) -> Path:
+    """Resolve a path under the packaged ``repocodex/data`` tree."""
     base = Path(__file__).resolve().parents[1] / "data"
     return base.joinpath(*parts)
 
 
 def _copy(src: Path, dest: Path) -> None:
+    """Copy ``src`` to ``dest``, creating parent directories as needed."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dest)
 
 
 def _resolvable(path: Path) -> bool:
+    """Return True when ``path`` exists after an install copy."""
     return path.exists()
 
 
@@ -30,6 +35,21 @@ def install(
     mcp: bool = False,
     skills: bool = True,
 ) -> dict:
+    """Install distribution artefacts into ``repo`` and report what landed.
+
+    Always attempts the git pre-commit hook (when ``.git`` exists) and the
+    GitHub Actions workflow. When ``skills`` is true, also copies Cursor and
+    Claude skills, the Cursor rule, a CLAUDE.md pointer (create or append),
+    and the plugin tree. When ``mcp`` is true, merges ``mcpServers`` into
+    ``.cursor/mcp.json`` if the MCP extra is installed. Creates
+    ``.repocodex.toml`` when missing and ignores ``.repocodex/metrics.jsonl``.
+
+    Returns:
+        Envelope with ``installed``, ``failed``, ``skipped`` path lists,
+        ``ok`` (true when ``failed`` is empty), and ``mcp`` (true only when
+        MCP config was written).
+
+    """
     installed: list[str] = []
     failed: list[str] = []
     skipped: list[str] = []

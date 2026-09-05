@@ -1,3 +1,10 @@
+"""Pin v2 review-gap contracts for claims, ratchet scope, and advisory.
+
+Cover claim-owned anchors, matched-region ratchet, shadow and ratchet reason
+parity, repair invocation, review acknowledgments, and advisory vs required
+verdicts.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

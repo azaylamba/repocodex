@@ -1,3 +1,9 @@
+"""Pin validate classifications, impact, and posture.
+
+Cover LIVE through formatting, REANCHOR on rename, CLAIM_BROKEN on literal
+change, cross-package impact, dilution warnings, and non-blocking shadow.
+"""
+
 from __future__ import annotations
 
 import json

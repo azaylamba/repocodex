@@ -1,3 +1,5 @@
+"""Classify changed-file anchors and emit a validate envelope with blocking gates."""
+
 from __future__ import annotations
 
 import os
@@ -20,6 +22,7 @@ from repocodex.tools.git import git_is_tracked, run_git
 
 
 def _paths_from_name_status(output: str) -> list[str]:
+    """Parse ``git diff --name-status`` lines, including both rename paths."""
     files: list[str] = []
     for line in output.splitlines():
         parts = line.split("\t")
@@ -41,10 +44,17 @@ _ARTEFACT_PREFIXES = (
 
 
 def _is_artefact(path: str) -> bool:
+    """Return True when ``path`` is an installed skill artefact, not repo memory."""
     return any(path.startswith(p) for p in _ARTEFACT_PREFIXES)
 
 
 def changed_files(root: Path, *, base: str | None, staged: bool) -> list[str]:
+    """List repo-relative changed paths, omitting installed skill artefacts.
+
+    ``staged`` uses the index, ``base`` diffs that ref, otherwise HEAD plus
+    untracked files. Order is preserved after de-duplication.
+
+    """
     if staged:
         result = run_git(["diff", "-M", "--name-status", "--cached"], cwd=root)
         return [p for p in dict.fromkeys(_paths_from_name_status(result.stdout)) if p and not _is_artefact(p)]
@@ -61,6 +71,7 @@ def changed_files(root: Path, *, base: str | None, staged: bool) -> list[str]:
 
 
 def _worst(outcomes: list[str]) -> str:
+    """Return the most severe classification, mapping DRIFT to RECONCILE."""
     order = [LIVE, WEAK, REANCHOR, CLAIM_BROKEN, "CONTRADICTION", "RECONCILE"]
     mapped = []
     for item in outcomes:
@@ -74,12 +85,14 @@ def _worst(outcomes: list[str]) -> str:
 
 
 def _in_ci() -> bool:
+    """Return True when CI or GitHub Actions environment markers are set."""
     return os.environ.get("CI", "").lower() in {"1", "true", "yes"} or os.environ.get(
         "GITHUB_ACTIONS", ""
     ).lower() in {"1", "true", "yes"}
 
 
 def _ack_evidence(root: Path, ack_file: str | None) -> dict | None:
+    """Return tracked memory-exempt acknowledgment evidence, or None."""
     env_evidence = os.environ.get("REPOCODEX_REVIEW_ACK_EVIDENCE")
     if env_evidence and _in_ci():
         return {"via": "ci_context", "evidence": env_evidence[:500]}
@@ -119,6 +132,27 @@ def validate(
     ack_file: str | None = None,
     config: RepoConfig | None = None,
 ) -> dict:
+    """Classify intersecting stable anchors and decide whether the change blocks.
+
+    Evaluates anchors on changed files (or all stable concepts when
+    ``all_concepts``). ``result`` is the worst classification, forced to
+    ``RECONCILE`` when any anchor drifted and to ``WRITE`` when the ratchet
+    fires on an otherwise LIVE/WEAK set. A ``memory-exempt`` PR label or
+    flag clears ``blocking_reasons`` only with acknowledgment evidence;
+    otherwise ``exemption_refused`` is ``missing_acknowledgment``. Records
+    ``drift`` and ``validate`` metrics.
+
+    Returns:
+        Envelope with ``result``, ``posture``, ``blocking``,
+        ``blocking_reasons``, ``outcomes``, ``lost``, ``weak``,
+        ``claim_findings``, ``patches``, ``candidates``,
+        ``impacted_scenarios``, ``dilution_warnings``,
+        ``identity_prefix_warnings``, ``contradictions``, ``index_sync``,
+        ``skipped_memory``, ``changed_files``, ``memory_exempt``,
+        ``exemption_refused``, ``audit_entries``, ``repair_tasks``,
+        ``false_drift_rate``, and ``latency_ms``.
+
+    """
     timer = Timer()
     config = config or load_config(root)
     files = changed_files(root, base=base, staged=staged)
@@ -190,6 +224,9 @@ def validate(
     if ratchet and result in {LIVE, WEAK}:
         result = "WRITE"
 
+    # Weak, dilution, and prefix mismatches stay advisory so they inform the
+    # agent without failing the required check; only REQUIRED_CHECK_REASONS
+    # (and in shadow posture, only skipped_memory) set blocking.
     blocking_reasons: list[str] = []
     if lost:
         blocking_reasons.append("drift")

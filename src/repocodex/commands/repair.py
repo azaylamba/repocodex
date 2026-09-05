@@ -1,3 +1,5 @@
+"""Invoke an agent harness to repair drifted anchors after validate."""
+
 from __future__ import annotations
 
 import shutil
@@ -15,10 +17,12 @@ preferred), and run `repocodex write` / `repocodex reconcile` until the write
 gate accepts. Do not finish with unrepaired DRIFT.
 """
 
+# Cursor owns the skill loop; Claude has CLAUDE.md/plugin; Codex is last-resort.
 HARNESS_ORDER = ("cursor", "claude", "codex")
 
 
 def _available_harness() -> str | None:
+    """Return the first repair CLI found on PATH."""
     for binary in HARNESS_ORDER:
         if shutil.which(binary):
             return binary
@@ -26,6 +30,7 @@ def _available_harness() -> str | None:
 
 
 def _invoke_argv(harness: str, prompt: str) -> list[str] | None:
+    """Return the argv that delivers ``prompt`` to a known harness."""
     if harness == "claude":
         return ["claude", "-p", prompt]
     if harness == "codex":
@@ -36,6 +41,19 @@ def _invoke_argv(harness: str, prompt: str) -> list[str] | None:
 
 
 def repair(repo: Path, *, invoke_agent: bool = True) -> dict:
+    """Run validate, then invoke the first available harness with a repair prompt.
+
+    Does not re-validate after the agent. ``invoke_agent`` false, or no CLI on
+    PATH, yields ``no_agent_harness``. A known binary with no argv mapping
+    yields ``undeliverable_harness``. Spawn or non-zero exit yields
+    ``harness_invocation_failed``.
+
+    Returns:
+        Envelope with ``verdict``, ``lost``, ``candidates``, ``prompt``,
+        ``ok``, ``invoked``, and on failure ``error`` plus optional
+        ``agent``, ``reason``, ``invocation_error``, or ``returncode``.
+
+    """
     verdict = validate(repo)
     prompt = REPAIR_PROMPT.strip()
     lost = verdict.get("lost", [])

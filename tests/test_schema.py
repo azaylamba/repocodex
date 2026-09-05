@@ -1,3 +1,9 @@
+"""Pin concept frontmatter parse and serialize contracts.
+
+Cover OKF types, claims, anchors, unknown extension fields, and round-trip
+stability of concept documents.
+"""
+
 from __future__ import annotations
 
 from repocodex.schema import (

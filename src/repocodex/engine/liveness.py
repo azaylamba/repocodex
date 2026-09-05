@@ -1,3 +1,5 @@
+"""Classify each concept anchor as live, weak, reanchorable, or drifted."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,6 +26,8 @@ CLAIM_BROKEN = "CLAIM_BROKEN"
 
 @dataclass
 class AnchorOutcome:
+    """Per-anchor liveness classification and optional reanchor patch."""
+
     concept: str
     anchor_index: int
     path: str
@@ -35,6 +39,7 @@ class AnchorOutcome:
     candidates: list[dict] | None = None
 
     def to_json(self) -> dict:
+        """Return this outcome as a JSON-serializable dict."""
         payload = {
             "concept": self.concept,
             "anchor": self.anchor_index,
@@ -53,6 +58,8 @@ class AnchorOutcome:
 
 @dataclass
 class ClaimFinding:
+    """A claim literal that is no longer present in its owning region."""
+
     concept: str
     literal: str
     classification: str = CLAIM_BROKEN
@@ -60,6 +67,7 @@ class ClaimFinding:
     path: str | None = None
 
     def to_json(self) -> dict:
+        """Return this finding as a JSON-serializable dict."""
         payload = {
             "concept": self.concept,
             "literal": self.literal,
@@ -81,6 +89,11 @@ def classify_anchor(
     staged: bool = False,
     base: str | None = None,
 ) -> AnchorOutcome:
+    """Classify one anchor as LIVE, WEAK, REANCHOR, or DRIFT.
+
+    LIVE meets ``min_match``; WEAK has a partial hit; REANCHOR has a unique
+    relocation candidate; otherwise DRIFT with any remaining candidates.
+    """
     matched = evaluate_file(anchor, config.root, default_scope=config.scope_lines)
     required = min_match_for(anchor)
     hits = matched.hits_for_best()
@@ -144,6 +157,11 @@ def evaluate_claims(
     *,
     anchor_class: str | None = None,
 ) -> list[ClaimFinding]:
+    """Return CLAIM_BROKEN findings for stable concepts whose literals left the region.
+
+    Draft or claim-less documents yield an empty list. ``anchor_class`` is
+    copied onto each finding when provided.
+    """
     if doc.status != ConceptStatus.stable or not doc.frontmatter.claims:
         return []
     findings: list[ClaimFinding] = []

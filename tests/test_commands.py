@@ -1,3 +1,9 @@
+"""Smoke-test CLI commands against the sample architecture repo.
+
+Cover validate JSON, staged context retrieval, write and reconcile, and
+repair, install, bootstrap, and audit payloads.
+"""
+
 from __future__ import annotations
 
 import json

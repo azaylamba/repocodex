@@ -1,3 +1,5 @@
+"""Reasons that promote a validate finding into a required (blocking) check."""
+
 from __future__ import annotations
 
 REQUIRED_CHECK_REASONS = frozenset(

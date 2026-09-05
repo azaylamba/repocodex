@@ -1,3 +1,5 @@
+"""Compile anchor terms and find their co-occurrence regions in a file."""
+
 from __future__ import annotations
 
 import re
@@ -16,14 +18,17 @@ TOKEN_CHAR = r"[A-Za-z0-9_]"
 
 
 def is_regex_term(term: str) -> bool:
+    """Return True when ``term`` is a slash-wrapped regular expression."""
     return len(term) > 2 and term.startswith("/") and term.endswith("/")
 
 
 def is_marker_term(term: str) -> bool:
+    """Return True when ``term`` looks like a ``why:`` marker."""
     return bool(MARKER_RE.search(term)) or "why:" in term.lower()
 
 
 def compile_term(term: str) -> re.Pattern[str]:
+    """Compile ``term`` to a regex, using word boundaries for identifiers."""
     if is_regex_term(term):
         return re.compile(term[1:-1])
     if IDENTIFIER_RE.fullmatch(term):
@@ -34,6 +39,7 @@ def compile_term(term: str) -> re.Pattern[str]:
 
 
 def term_hits(term: str, lines: list[str]) -> list[int]:
+    """Return 0-based line indexes where ``term`` matches."""
     text = "\n".join(lines)
     pattern = compile_term(term)
     hits: list[int] = []
@@ -44,11 +50,12 @@ def term_hits(term: str, lines: list[str]) -> list[int]:
 
 
 def term_in_text(term: str, text: str) -> bool:
+    """Return True when ``term`` occurs anywhere in ``text``."""
     return bool(compile_term(term).search(text))
 
 
 def literal_as_token(literal: str, text: str) -> bool:
-    """True when `literal` appears as its own token in `text`, not as a substring."""
+    """Return True when ``literal`` appears as its own token in ``text``."""
     if not literal or not text:
         return False
     escaped = re.escape(literal)
@@ -58,11 +65,16 @@ def literal_as_token(literal: str, text: str) -> bool:
 
 
 def claim_in_terms(literal: str, terms: list[str]) -> bool:
+    """Return True when ``literal`` is a token of any term, or equals a term."""
     return any(literal_as_token(literal, term) or literal == term for term in terms)
 
 
 def resolve_claim_owner(claim: Claim, anchors: list[Anchor]) -> tuple[int | None, str | None]:
-    """Return (anchor_index, error). error is None when the owner is unambiguous."""
+    """Return ``(anchor_index, error)`` for the claim's owning anchor.
+
+    ``error`` is None when the owner is unambiguous. Otherwise it is
+    ``out_of_range``, ``claim_not_anchored``, or ``ambiguous``.
+    """
     n = len(anchors)
     if claim.anchor is not None:
         if claim.anchor < 0 or claim.anchor >= n:
@@ -80,14 +92,18 @@ def resolve_claim_owner(claim: Claim, anchors: list[Anchor]) -> tuple[int | None
 
 @dataclass
 class Region:
+    """A contiguous line span and the anchor terms that hit it."""
+
     start: int
     end: int
     terms_hit: list[str] = field(default_factory=list)
 
     def overlaps(self, other: Region, gap: int = 0) -> bool:
+        """Return True when the spans overlap, allowing ``gap`` lines between them."""
         return self.start <= other.end + gap and other.start <= self.end + gap
 
     def merge(self, other: Region) -> Region:
+        """Return a region covering both spans and the union of terms hit."""
         return Region(
             start=min(self.start, other.start),
             end=max(self.end, other.end),
@@ -95,11 +111,14 @@ class Region:
         )
 
     def source(self, lines: list[str]) -> str:
+        """Return the source text for this inclusive line span."""
         return "\n".join(lines[self.start : self.end + 1])
 
 
 @dataclass
 class AnchorMatch:
+    """All matching regions for one anchor in one file."""
+
     path: str
     regions: list[Region]
     term_lines: dict[str, list[int]]
@@ -107,15 +126,18 @@ class AnchorMatch:
 
     @property
     def best(self) -> Region | None:
+        """Tightest matching region, preferring more terms then earlier start."""
         if not self.regions:
             return None
         return max(self.regions, key=lambda region: (len(region.terms_hit), -region.start))
 
     def hits_for_best(self) -> int:
+        """Return how many terms the best region hit, or 0 if none."""
         return len(self.best.terms_hit) if self.best else 0
 
 
 def _merge_regions(regions: list[Region], gap: int) -> list[Region]:
+    """Merge regions that overlap within ``gap`` lines."""
     if not regions:
         return []
     ordered = sorted(regions, key=lambda region: region.start)
@@ -129,6 +151,7 @@ def _merge_regions(regions: list[Region], gap: int) -> list[Region]:
 
 
 def match_anchor(anchor: Anchor, text: str, *, default_scope: int = 40) -> AnchorMatch:
+    """Find co-occurrence regions for ``anchor`` inside ``text``."""
     lines = text.splitlines() or [""]
     term_lines = {term: term_hits(term, lines) for term in anchor.all_of}
     scope = anchor.scope_lines or default_scope
@@ -172,12 +195,14 @@ def match_anchor(anchor: Anchor, text: str, *, default_scope: int = 40) -> Ancho
 
 
 def min_match_for(anchor: Anchor) -> int:
+    """Return the required term-hit count, defaulting to every ``all_of`` term."""
     if anchor.min_match is None:
         return len(anchor.all_of)
     return max(1, min(anchor.min_match, len(anchor.all_of)))
 
 
 def read_pinned(root: Path, path: str) -> str | None:
+    """Return the pinned file's text, or None if it is missing."""
     target = root / path
     if not target.is_file():
         return None
@@ -185,6 +210,7 @@ def read_pinned(root: Path, path: str) -> str | None:
 
 
 def evaluate_file(anchor: Anchor, root: Path, *, default_scope: int = 40) -> AnchorMatch:
+    """Match ``anchor`` against its pinned file on disk."""
     text = read_pinned(root, anchor.path)
     if text is None:
         return AnchorMatch(
@@ -197,6 +223,7 @@ def evaluate_file(anchor: Anchor, root: Path, *, default_scope: int = 40) -> Anc
 
 
 def only_import_hits(anchor: Anchor, text: str) -> bool:
+    """Return True when every term hit in ``text`` is on an import-like line."""
     lines = text.splitlines()
     for term in anchor.all_of:
         hits = term_hits(term, lines)

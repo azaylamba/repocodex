@@ -1,3 +1,9 @@
+"""Pin engine config loading from toml, ignore files, and defaults.
+
+Cover posture and ceiling overrides, ``.repocodexignore`` globs, and skip-walk
+directory stems that match default exclusions.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

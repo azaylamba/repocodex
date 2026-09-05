@@ -1,3 +1,9 @@
+"""Pin review-identified gaps across validate, ratchet, and install.
+
+Cover claim breakage, comment and format diffs, contradictions, exemptions,
+bootstrap and audit payloads, shard writes, and advisory findings.
+"""
+
 from __future__ import annotations
 
 import json

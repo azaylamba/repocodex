@@ -1,3 +1,5 @@
+"""Rank code-side impact and wrap optional agent judgments into a non-blocking advisory envelope."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,6 +15,7 @@ EVALUATED = "evaluated"
 
 
 def _category(status: str, findings: list[dict] | None = None) -> dict[str, Any]:
+    """Build a category payload, attaching findings only when evaluated."""
     payload: dict[str, Any] = {"status": status}
     if status == EVALUATED:
         payload["findings"] = findings or []
@@ -26,6 +29,18 @@ def advisory(
     staged: bool = False,
     judgments: dict[str, list[dict]] | None = None,
 ) -> dict:
+    """Return a non-blocking advisory envelope for the current diff.
+
+    Skips ``.context/`` paths and ``reverse-index.md``. Judgment categories
+    without a key in ``judgments`` stay ``not_evaluated``.
+
+    Returns:
+        Envelope with ``kind`` ``advisory``, ``code_side_impact`` (path/hits
+        rows), ``prose_versus_diff``, ``skipped_recipe_steps``, ``churn_flags``
+        (each ``status`` plus optional ``findings``), ``agent_judgment``, and
+        ``required_verdict_unaffected`` always ``True``.
+
+    """
     config = load_config(repo)
     files = changed_files(repo, base=base, staged=staged)
     code_side: list[dict] = []
@@ -62,7 +77,16 @@ def advisory(
 
 
 def scenario_integrity_status(root: Path) -> dict:
-    """OKF-loop capability. Unsatisfied until a bundle exists; never falls back to a test table."""
+    """Report whether an OKF concept bundle exists for scenario integrity.
+
+    Never falls back to a test table.
+
+    Returns:
+        ``{"status": "unsatisfied", "reason": "no_okf_bundle"}`` when no
+        concepts are loaded, otherwise
+        ``{"status": "available", "reason": "agent_read_okf"}``.
+
+    """
     from repocodex.store.bundle import load_concepts
 
     concepts = load_concepts(root)

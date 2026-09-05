@@ -1,3 +1,5 @@
+"""Typer CLI for RepoCodex. Commands print JSON envelopes and exit non-zero on failure."""
+
 from __future__ import annotations
 
 import json
@@ -23,15 +25,18 @@ app = typer.Typer(no_args_is_help=True, add_completion=False, help="RepoCodex ex
 
 
 def _emit(payload: dict, exit_code: int = 0) -> None:
+    """Print ``payload`` as JSON and exit with ``exit_code``."""
     typer.echo(json.dumps(payload, indent=2))
     raise typer.Exit(exit_code)
 
 
 def _repo() -> Path:
+    """Return the process working directory as the target repository."""
     return Path.cwd()
 
 
 def _guarded(fn):
+    """Run ``fn`` and emit an engine-version-mismatch envelope on pin failure."""
     try:
         return fn()
     except EngineVersionMismatch as exc:

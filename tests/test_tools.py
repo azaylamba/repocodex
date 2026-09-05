@@ -1,3 +1,8 @@
+"""Pin ripgrep and git wrapper behavior used by the engine.
+
+Cover version reporting, file search and counts, and structured git results.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

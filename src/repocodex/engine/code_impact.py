@@ -1,3 +1,5 @@
+"""Rank other source files that mention a symbol from a changed path."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,6 +11,7 @@ TEST_HINTS = ("test", "spec", "tests/")
 
 
 def _proximity(changed: str, hit: str) -> int:
+    """Return how many leading path parts two files share."""
     a = Path(changed).parts
     b = Path(hit).parts
     shared = 0
@@ -27,6 +30,13 @@ def rank_code_hits(
     cap: int = 12,
     exclusions: list[str] | None = None,
 ) -> list[dict]:
+    """Rank files that mention ``symbol`` by directory proximity to ``changed_path``.
+
+    The changed file itself is omitted. Test-like paths score slightly lower.
+
+    Returns:
+        Dicts with ``path`` and ``score``, closest first, at most ``cap`` items.
+    """
     files = rg_files(symbol, root, fixed=True, exclusions=exclusions)
     ranked = []
     for raw in files:

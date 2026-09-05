@@ -1,3 +1,5 @@
+"""Run the RepoCodex CLI as `python -m repocodex`."""
+
 from __future__ import annotations
 
 from repocodex.cli import app

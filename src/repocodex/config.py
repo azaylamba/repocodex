@@ -1,3 +1,5 @@
+"""Load `.repocodex.toml` / `.repocodexignore` and pin the running engine version."""
+
 from __future__ import annotations
 
 import fnmatch
@@ -25,6 +27,7 @@ DEFAULT_EXCLUSIONS = [
 
 
 def _skip_walk_dir_names(exclusions: list[str]) -> frozenset[str]:
+    """Collect directory names that tree walks should skip from exclusion globs."""
     names = {"venv", "env", ".nuxt", ".tox", ".mypy_cache", ".pytest_cache", ".cache", ".turbo"}
     for glob in exclusions:
         stem = glob.replace("/**", "").replace("**/", "").strip("/")
@@ -37,12 +40,15 @@ SKIP_WALK_DIR_NAMES = _skip_walk_dir_names(DEFAULT_EXCLUSIONS)
 
 
 class EngineVersionMismatch(Exception):
+    """Raised when `.repocodex.toml` pins a different engine than this package."""
+
     def __init__(self, pinned: str, running: str) -> None:
         super().__init__(f"engine_version_mismatch: pinned={pinned} running={running}")
         self.pinned = pinned
         self.running = running
 
     def to_json(self) -> dict:
+        """Return a CLI envelope describing the pin mismatch."""
         return envelope(
             {
                 "error": "engine_version_mismatch",
@@ -54,6 +60,8 @@ class EngineVersionMismatch(Exception):
 
 @dataclass
 class RepoConfig:
+    """Resolved engine settings for one repository root."""
+
     root: Path
     engine_version: str = ENGINE_VERSION
     posture: str = "shadow"
@@ -66,6 +74,7 @@ class RepoConfig:
 
     @property
     def all_exclusions(self) -> list[str]:
+        """Config exclusions plus ignore-file globs, first occurrence kept."""
         seen: list[str] = []
         for glob in [*self.exclusions, *self.ignore_globs]:
             if glob not in seen:
@@ -74,6 +83,7 @@ class RepoConfig:
 
 
 def normalize_repo_path(path: str) -> str:
+    """Normalize slashes and strip a leading ``./`` from a repo-relative path."""
     normalized = path.replace("\\", "/")
     while normalized.startswith("./"):
         normalized = normalized[2:]
@@ -81,6 +91,7 @@ def normalize_repo_path(path: str) -> str:
 
 
 def matches_exclusion(path: str, globs: list[str]) -> bool:
+    """Return True when ``path`` matches any gitignore-style exclusion glob."""
     normalized = normalize_repo_path(path)
     name = Path(normalized).name
     for glob in globs:
@@ -92,6 +103,7 @@ def matches_exclusion(path: str, globs: list[str]) -> bool:
 
 
 def _default_ceiling(root: Path, exclusions: list[str]) -> int:
+    """Derive a distinctiveness ceiling from the size of the tracked tree."""
     files = [
         path
         for path in git_ls_files(root)
@@ -102,6 +114,7 @@ def _default_ceiling(root: Path, exclusions: list[str]) -> int:
 
 
 def load_ignore_file(path: Path) -> list[str]:
+    """Return non-comment glob lines from an ignore file, or ``[]`` if missing."""
     if not path.exists():
         return []
     globs: list[str] = []
@@ -113,6 +126,16 @@ def load_ignore_file(path: Path) -> list[str]:
 
 
 def load_config(root: Path, *, enforce_pin: bool = True) -> RepoConfig:
+    """Load repo config from `.repocodex.toml` and `.repocodexignore`.
+
+    Args:
+        root: Repository root.
+        enforce_pin: When True, raise if the file's engine_version disagrees
+            with this package.
+
+    Raises:
+        EngineVersionMismatch: Pin disagrees with ``ENGINE_VERSION``.
+    """
     root = root.resolve()
     data: dict = {}
     toml_path = root / ".repocodex.toml"

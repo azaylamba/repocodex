@@ -1,3 +1,10 @@
+"""Sample architecture trees used to pin RepoCodex engine behavior.
+
+Hold source snippets and OKF concept markdown that model billing grace,
+custom streamers, checkout workflows, and layering guardrails. Helpers write
+those files into a temp repo and optionally initialize git.
+"""
+
 from __future__ import annotations
 
 import subprocess
@@ -161,12 +168,21 @@ exclusions = ["vendor/**", "node_modules/**", "dist/**"]
 
 @dataclass
 class SampleRepo:
+    """Paths into a generated sample architecture repository.
+
+    Attributes:
+        root: Repository root that contains ``.context`` and ``.repocodex.toml``.
+        payment_gateway: Billing ``PaymentGateway.ts`` used by the grace invariant.
+        streamer: Custom data streamer source pinned by the technical decision.
+    """
+
     root: Path
     payment_gateway: Path
     streamer: Path
 
 
 def init_git_repo(root: Path) -> None:
+    """Initialize a git repo at ``root``, then add and commit all files."""
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
@@ -175,6 +191,17 @@ def init_git_repo(root: Path) -> None:
 
 
 def write_architecture_fixtures(root: Path) -> SampleRepo:
+    """Write the sample architecture sources, concepts, and engine config.
+
+    Creates billing, streamer, ledger, and notify sources, OKF concepts under
+    ``.context``, default ``.repocodex.toml``, and regenerates the reverse index.
+
+    Args:
+        root: Directory that becomes the sample repository root.
+
+    Returns:
+        SampleRepo with paths to the root and the two primary source files.
+    """
     billing = root / "src" / "billing"
     streams = root / "src" / "core" / "streams"
     ledger = root / "src" / "ledger"
@@ -241,6 +268,15 @@ def write_architecture_fixtures(root: Path) -> SampleRepo:
 
 
 def write_claimed_workflow(root: Path, *, commit: bool = False) -> Path:
+    """Write a claimed checkout-hold workflow and regenerate the reverse index.
+
+    Args:
+        root: Repository root that already has a ``.context`` tree.
+        commit: If True, stage and commit the new files.
+
+    Returns:
+        Path to the written ``checkout-hold.md`` concept.
+    """
     billing = root / "src" / "billing" / "checkout_hold.ts"
     billing.parent.mkdir(parents=True, exist_ok=True)
     billing.write_text(CHECKOUT_HOLD_SOURCE, encoding="utf-8")
