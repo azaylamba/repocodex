@@ -22,3 +22,4 @@ Pin the engine in `.repocodex.toml`. Hook, local CLI, and CI resolve that pin so
 | [Memory](docs/memory.md) | How to read `.context/` |
 | [Agents](docs/agents.md) | How coding agents (and optionally humans) run the loop |
 | [Install](docs/install.md) | CLI, pin, hook, GitHub Action, optional MCP |
+| [Architecture](docs/research/architecture.md) | Current engine architecture (further reading) |

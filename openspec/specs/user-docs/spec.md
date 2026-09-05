@@ -8,7 +8,7 @@ User-facing documentation layout, README scope, and the explanations readers MUS
 
 ### Requirement: README is the project front door only
 
-`README.md` SHALL contain only what a first-time visitor needs to decide whether RepoCodex applies and to take the first step: one-paragraph purpose and benefit, a one-line positioning (git-native why next to code; pin check, not a test suite), install, the smallest command set (`install`, `context`, `validate`), engine-version pin, and links to `docs/`. It SHALL NOT duplicate architecture, CLI encyclopedias, OpenSpec, or full OKF field lists.
+`README.md` SHALL contain only what a first-time visitor needs to decide whether RepoCodex applies and to take the first step: one-paragraph purpose and benefit, a one-line positioning (git-native why next to code; pin check, not a test suite), install, the smallest command set (`install`, `context`, `validate`), engine-version pin, and links to `docs/`. It MAY include one table row linking `docs/research/architecture.md` as further reading. It SHALL NOT duplicate architecture body text, CLI encyclopedias, OpenSpec, or full OKF field lists.
 
 #### Scenario: README stays short
 
@@ -22,7 +22,14 @@ User-facing documentation layout, README scope, and the explanations readers MUS
 
 - **GIVEN** the project README
 - **WHEN** it is compared to `docs/`
-- **THEN** it does not contain the full agent loop, the OKF field catalog, or the research architecture
+- **THEN** it does not contain the full agent loop, the OKF field catalog, or the research architecture body
+
+#### Scenario: README may link architecture as further reading
+
+- **GIVEN** the project README
+- **WHEN** a reader wants engine architecture
+- **THEN** they can follow a link to `docs/research/architecture.md`
+- **AND** that link is labeled as further reading, not a required first step
 
 ### Requirement: README names the author without becoming a bio
 
@@ -48,7 +55,8 @@ The documentation tree SHALL use these files and no extra user-facing guides unl
 | `docs/agents.md` | How coding agents (and optionally humans) run that loop so a change does not detach why from code |
 | `docs/install.md` | `repocodex install`, `.repocodex.toml` pin, hook, GitHub Action, optional `mcp` extra |
 | `CONTRIBUTING.md` | How to contribute to the *engine* (tests, OpenSpec), not how to use memory in an application repo |
-| `docs/research/architecture.md` | Canonical design; linked as further reading, not onboarding |
+| `docs/research/architecture.md` | Current engine architecture for OSS readers (components, data flow, interfaces as shipped); linked as further reading, not onboarding |
+| `docs/research/design-history.md` | Frozen Revision 2.1 research record (design breaks, implementation-review tables); not the shipped contract |
 
 A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of copy.
 
@@ -65,6 +73,13 @@ A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of
 - **WHEN** a reader wants engine internals
 - **THEN** they are linked to `docs/research/architecture.md`
 - **AND** they are not required to read it to understand purpose, benefit, and the loop
+
+#### Scenario: Design history is not the shipped contract
+
+- **GIVEN** `docs/research/design-history.md`
+- **WHEN** a reader opens it
+- **THEN** a banner states it is historical
+- **AND** they are pointed at `docs/research/architecture.md` for the current system
 
 ### Requirement: Readers can explain purpose, benefit, and the loop
 

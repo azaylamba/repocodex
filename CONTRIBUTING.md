@@ -31,4 +31,4 @@ Behavior changes go through [OpenSpec](https://github.com/Fission-AI/OpenSpec) i
 openspec validate --all --strict
 ```
 
-Do not rewrite [docs/research/architecture.md](docs/research/architecture.md) as a side effect of a small engine change; link it when the canonical design actually moved.
+Do not rewrite [docs/research/architecture.md](docs/research/architecture.md) as a side effect of a small engine change; update it when the current system design actually moved. [docs/research/design-history.md](docs/research/design-history.md) is frozen research history, not the shipped contract.
