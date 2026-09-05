@@ -15,7 +15,7 @@ Experimental `0.0.1`. Requires Python 3.11+ and [ripgrep](https://github.com/Bur
 ## Install
 
 ```bash
-pip install "git+https://github.com/azaylamba/repocodex.git@v0.0.1"
+pip install "repocodex==0.0.1"
 # or from a local clone: pip install -e .
 repocodex install
 ```

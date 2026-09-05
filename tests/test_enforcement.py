@@ -87,7 +87,7 @@ def test_install_hook_is_executable(repo):
     assert "git commit" in text or "Filters" in text or "filters" in text.lower()
 
 
-def test_install_writes_default_pin_and_git_action(tmp_path: Path):
+def test_install_writes_default_pin_and_pypi_action(tmp_path: Path):
     (tmp_path / "README.md").write_text("sample\n", encoding="utf-8")
     init_git_repo(tmp_path)
     payload = install(tmp_path)
@@ -95,5 +95,5 @@ def test_install_writes_default_pin_and_git_action(tmp_path: Path):
     pin = (tmp_path / ".repocodex.toml").read_text(encoding="utf-8")
     assert 'engine_version = "0.0.1"' in pin
     action = (tmp_path / ".github" / "workflows" / "repocodex.yml").read_text(encoding="utf-8")
-    assert "git+https://github.com/azaylamba/repocodex.git@v${PIN}" in action
-    assert 'pip install "repocodex==' not in action
+    assert 'pip install "repocodex==${PIN}"' in action
+    assert "git+https://github.com/azaylamba/repocodex.git" not in action

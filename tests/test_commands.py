@@ -66,8 +66,8 @@ def test_repair_install_bootstrap_audit(repo):
     assert any("repocodex.yml" in item for item in installed["installed"])
     assert (repo.root / ".cursor" / "skills" / "repocodex-coding" / "SKILL.md").exists()
     action = (repo.root / ".github" / "workflows" / "repocodex.yml").read_text(encoding="utf-8")
-    assert "git+https://github.com/azaylamba/repocodex.git@v${PIN}" in action
-    assert 'pip install "repocodex==' not in action
+    assert 'pip install "repocodex==${PIN}"' in action
+    assert "git+https://github.com/azaylamba/repocodex.git" not in action
     boot = json.loads(run_cli(["bootstrap"], cwd=repo.root).stdout)
     assert boot.get("status") == "draft"
     audit = json.loads(run_cli(["audit", "--sample-size", "2"], cwd=repo.root).stdout)

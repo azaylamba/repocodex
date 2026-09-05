@@ -351,8 +351,8 @@ def test_action_has_no_unpinned_fallback():
 
     text = _data_path("action", "repocodex.yml").read_text(encoding="utf-8")
     assert "|| pip install" not in text
-    assert 'pip install "git+https://github.com/azaylamba/repocodex.git@v${PIN}"' in text
-    assert 'pip install "repocodex==' not in text
+    assert 'pip install "repocodex==${PIN}"' in text
+    assert "git+https://github.com/azaylamba/repocodex.git" not in text
     assert "repocodex advisory" in text
     assert "actions/checkout@v7" in text
     assert "actions/setup-python@v7" in text
@@ -371,6 +371,21 @@ def test_engine_ci_does_not_require_context_bundle():
     assert "ripgrep" in text
     assert 'pip install -e ".[dev]"' in text
     assert "repocodex validate" not in text
+
+
+def test_publish_workflow_uses_trusted_publishing():
+    from pathlib import Path
+
+    workflow = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "publish.yml"
+    text = workflow.read_text(encoding="utf-8")
+    assert "actions/checkout@v7" in text
+    assert "actions/setup-python@v7" in text
+    assert 'python-version: "3.11"' in text
+    assert "python -m build" in text
+    assert "pypa/gh-action-pypi-publish" in text
+    assert "id-token: write" in text
+    assert "PYPI_API_TOKEN" not in text
+    assert "pypi" in text.lower()
 
 
 def test_staged_rename_reanchors(repo):

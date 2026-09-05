@@ -22,7 +22,7 @@ jobs:
         run: |
           PIN=$(python3 -c "import tomllib,pathlib; p=pathlib.Path('.repocodex.toml');
 print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '0.0.1')")
-          pip install "git+https://github.com/azaylamba/repocodex.git@v${PIN}"
+          pip install "repocodex==${PIN}"
       - name: Resolve memory-exempt acknowledgment
         id: ack
         if: github.event_name == 'pull_request'
@@ -80,7 +80,7 @@ print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '0.0.1')
         run: |
           PIN=$(python3 -c "import tomllib,pathlib; p=pathlib.Path('.repocodex.toml');
 print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '0.0.1')")
-          pip install "git+https://github.com/azaylamba/repocodex.git@v${PIN}"
+          pip install "repocodex==${PIN}"
       - name: Advisory findings
         run: |
           BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
