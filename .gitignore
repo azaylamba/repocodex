@@ -12,3 +12,6 @@ dist/
 
 # Local OpenSpec change archives (brainstorming history). Do not publish.
 openspec/changes/archive/
+
+# Local research notes. Do not publish.
+docs/research/design-history.md

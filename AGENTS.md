@@ -10,7 +10,6 @@ This is not an application repo that *uses* RepoCodex. There is no `.context/` b
 | How agents run that loop in an app repo | [docs/agents.md](docs/agents.md) |
 | Engine contributor setup / OpenSpec | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Current engine architecture (further reading) | [docs/research/architecture.md](docs/research/architecture.md) |
-| Design history (not the shipped contract) | [docs/research/design-history.md](docs/research/design-history.md) |
 
 Packaged installables (skills, rules, hooks) live under `src/repocodex/data/`. Do not treat this file as that content.
 
@@ -18,7 +17,7 @@ Packaged installables (skills, rules, hooks) live under `src/repocodex/data/`. D
 
 RepoCodex stores git-native *why* next to code and attests attachment with a deterministic pin check (ripgrep + git). Instruction files and test suites do not give that guarantee.
 
-This checkout builds that engine. Audience: coding agents first. Engine pytest pins CLI and attester behavior; it is not how application scenarios are verified. Do not rewrite `docs/research/architecture.md` as a side effect of a small change; update it when the current system design actually moved. Do not treat `docs/research/design-history.md` as the shipped contract.
+This checkout builds that engine. Audience: coding agents first. Engine pytest pins CLI and attester behavior; it is not how application scenarios are verified. Do not rewrite `docs/research/architecture.md` as a side effect of a small change; update it when the current system design actually moved. Do not commit `docs/research/design-history.md`; it is gitignored local research.
 
 ## Layout
 

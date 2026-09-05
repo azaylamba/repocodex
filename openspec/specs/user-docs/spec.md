@@ -56,7 +56,6 @@ The documentation tree SHALL use these files and no extra user-facing guides unl
 | `docs/install.md` | `repocodex install`, `.repocodex.toml` pin, hook, GitHub Action, optional `mcp` extra |
 | `CONTRIBUTING.md` | How to contribute to the *engine* (tests, OpenSpec), not how to use memory in an application repo |
 | `docs/research/architecture.md` | Current engine architecture for OSS readers (components, data flow, interfaces as shipped); linked as further reading, not onboarding |
-| `docs/research/design-history.md` | Frozen Revision 2.1 research record (design breaks, implementation-review tables); not the shipped contract |
 
 A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of copy.
 
@@ -73,13 +72,6 @@ A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of
 - **WHEN** a reader wants engine internals
 - **THEN** they are linked to `docs/research/architecture.md`
 - **AND** they are not required to read it to understand purpose, benefit, and the loop
-
-#### Scenario: Design history is not the shipped contract
-
-- **GIVEN** `docs/research/design-history.md`
-- **WHEN** a reader opens it
-- **THEN** a banner states it is historical
-- **AND** they are pointed at `docs/research/architecture.md` for the current system
 
 ### Requirement: Readers can explain purpose, benefit, and the loop
 

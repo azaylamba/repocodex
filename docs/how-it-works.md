@@ -28,4 +28,4 @@ The required check (pre-commit hook and the deterministic GitHub Action) attests
 - How agents (and optionally humans) run the loop: [agents.md](agents.md)
 - Install, pin, hook, CI, optional MCP: [install.md](install.md)
 
-Current engine architecture (further reading): [research/architecture.md](research/architecture.md). Design history: [research/design-history.md](research/design-history.md). You do not need either to understand purpose, benefit, or the loop.
+Current engine architecture (further reading): [research/architecture.md](research/architecture.md). You do not need it to understand purpose, benefit, or the loop.

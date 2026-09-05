@@ -5,7 +5,7 @@
 
 RepoCodex is a repository-native **executable memory** framework for coding agents (and review agents on the same interfaces). It stores *why code exists* next to the code in git, proves each record is about live text with a deterministic attester (ripgrep + git), and serves scoped context through a CLI, packaged skills, and an optional MCP wrapper.
 
-This document describes the **shipped engine**. For the product loop (retrieve → read → edit → update why → pin-check), start with [how-it-works.md](../how-it-works.md). Design history and self-validation tables live in [design-history.md](design-history.md) and are not the shipped contract.
+This document describes the **shipped engine**. For the product loop (retrieve → read → edit → update why → pin-check), start with [how-it-works.md](../how-it-works.md).
 
 **Positioning:** git-native memory that agents write, attest, and query — not a code-search engine, not another `AGENTS.md` (the pin check is the difference), not a static-analysis or test-suite replacement.
 
@@ -337,6 +337,5 @@ This engine repository does **not** yet carry a `.context/` bundle. Engine pytes
 | [agents.md](../agents.md) | Agent (and optional human) playbook |
 | [install.md](../install.md) | CLI, pin, hook, Action, MCP |
 | [CONTRIBUTING.md](../../CONTRIBUTING.md) | Engine contributor setup / OpenSpec |
-| [design-history.md](design-history.md) | Frozen Revision 2.1 research record |
 
 Language coverage is **anything grep-able**. There is no language allowlist.
