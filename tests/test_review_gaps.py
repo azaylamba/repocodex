@@ -354,6 +354,9 @@ def test_action_has_no_unpinned_fallback():
     assert 'pip install "git+https://github.com/azaylamba/repocodex.git@v${PIN}"' in text
     assert 'pip install "repocodex==' not in text
     assert "repocodex advisory" in text
+    assert "actions/checkout@v7" in text
+    assert "actions/setup-python@v7" in text
+    assert "actions/github-script@v9" in text
 
 
 def test_engine_ci_does_not_require_context_bundle():
@@ -361,6 +364,8 @@ def test_engine_ci_does_not_require_context_bundle():
 
     workflow = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "engine-tests.yml"
     text = workflow.read_text(encoding="utf-8")
+    assert "actions/checkout@v7" in text
+    assert "actions/setup-python@v7" in text
     assert "pytest" in text
     assert 'python-version: "3.11"' in text
     assert "ripgrep" in text
