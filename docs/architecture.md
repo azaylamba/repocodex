@@ -5,7 +5,7 @@
 
 RepoCodex is a repository-native **executable memory** framework for coding agents (and review agents on the same interfaces). It stores *why code exists* next to the code in git, proves each record is about live text with a deterministic attester (ripgrep + git), and serves scoped context through a CLI, packaged skills, and an optional MCP wrapper.
 
-This document describes the **shipped engine**. For the product loop (retrieve → read → edit → update why → pin-check), start with [how-it-works.md](../how-it-works.md).
+This document describes the **shipped engine**. For the product loop (retrieve → read → edit → update why → pin-check), start with [how-it-works.md](how-it-works.md).
 
 **Positioning:** git-native memory that agents write, attest, and query — not a code-search engine, not another `AGENTS.md` (the pin check is the difference), not a static-analysis or test-suite replacement.
 
@@ -76,7 +76,7 @@ flowchart TD
 | `.repocodexignore` | Extra scan-exclusion globs |
 | `.repocodex/metrics.jsonl` | Telemetry sink (gitignored); not memory |
 
-Identity is the path relative to `.context/` with `.md` removed. How to read a concept: [memory.md](../memory.md).
+Identity is the path relative to `.context/` with `.md` removed. How to read a concept: [memory.md](memory.md).
 
 **Authored type folders** (required for new writes of the four authored types):
 
@@ -332,10 +332,10 @@ This engine repository does **not** yet carry a `.context/` bundle. Engine pytes
 
 | Doc | Job |
 | --- | --- |
-| [how-it-works.md](../how-it-works.md) | Purpose, benefit, product loop |
-| [memory.md](../memory.md) | How to read `.context/` |
-| [agents.md](../agents.md) | Agent (and optional human) playbook |
-| [install.md](../install.md) | CLI, pin, hook, Action, MCP |
-| [CONTRIBUTING.md](../../CONTRIBUTING.md) | Engine contributor setup / OpenSpec |
+| [how-it-works.md](how-it-works.md) | Purpose, benefit, product loop |
+| [memory.md](memory.md) | How to read `.context/` |
+| [agents.md](agents.md) | Agent (and optional human) playbook |
+| [install.md](install.md) | CLI, pin, hook, Action, MCP |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Engine contributor setup / OpenSpec |
 
 Language coverage is **anything grep-able**. There is no language allowlist.

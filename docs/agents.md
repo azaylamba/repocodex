@@ -34,6 +34,28 @@ repocodex validate --diff
 
 Unrepaired pin breakage or undischarged skipped-memory is a failed turn. The pre-commit hook denies it.
 
+### Write sketch
+
+When validate returns `WRITE` / non-empty `skipped_memory`, discharge with a gate-passing concept file (or `--stdin`). Minimal first-touch coverage shape:
+
+```bash
+cat > /tmp/enterprise-grace.md <<'EOF'
+---
+title: Enterprise capture uses a three-attempt grace window
+type: TechnicalDecision
+verification:
+  engine: ripgrep
+  anchors:
+    - path: src/billing/PaymentGateway.ts
+      all_of: ["ENTERPRISE", "grace", "= 3"]
+---
+Why this construct exists: enterprise capture retries three times before failure.
+EOF
+repocodex write /tmp/enterprise-grace.md --identity decisions/enterprise-grace-window
+```
+
+Prefer stable tokens (literals, error strings, enums, thresholds). For must-hold tokens use `InvariantContract` with `claims`. The full when/how recipe — including volume and a multi-type example — lives in the installed coding skill after `repocodex install`. Follow that skill; do not invent a substitute.
+
 ## What to stage
 
 When you wrote or reanchored memory, the same commit must include:

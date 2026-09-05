@@ -31,4 +31,4 @@ Behavior changes go through [OpenSpec](https://github.com/Fission-AI/OpenSpec) i
 openspec validate --all --strict
 ```
 
-Do not rewrite [docs/research/architecture.md](docs/research/architecture.md) as a side effect of a small engine change; update it when the current system design actually moved. Do not commit `docs/research/design-history.md` or `docs/superpowers/` — both are gitignored local research, not the shipped contract.
+Do not rewrite [docs/architecture.md](docs/architecture.md) as a side effect of a small engine change; update it when the current system design actually moved. Do not commit `docs/research/design-history.md` or `docs/superpowers/` — both are gitignored local research, not the shipped contract.

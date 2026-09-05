@@ -8,15 +8,16 @@ User-facing documentation layout, README scope, and the explanations readers MUS
 
 ### Requirement: README is the project front door only
 
-`README.md` SHALL contain only what a first-time visitor needs to decide whether RepoCodex applies and to take the first step: one-paragraph purpose and benefit, a one-line positioning (git-native why next to code; pin check, not a test suite), install, the smallest command set (`install`, `context`, `validate`), engine-version pin, and links to `docs/`. It MAY include one table row linking `docs/research/architecture.md` as further reading. It SHALL NOT duplicate architecture body text, CLI encyclopedias, OpenSpec, or full OKF field lists.
+`README.md` SHALL contain what a first-time visitor needs to decide whether RepoCodex applies and to take the first step: a plain-language tagline and short problem statement (what breaks without pin-checked why), one-paragraph purpose and benefit, explicit “not X” positioning (not a test suite, not another `AGENTS.md`, not a linter), prerequisites (Python 3.11+, ripgrep on `PATH`), install, the smallest command set (`install`, `context`, `validate`) each with a one-line why, a short illustrative example (sample concept or before/after turn, not a full tutorial), engine-version pin / experimental status, and links to `docs/`. It MAY include a CI badge and links to License, Contributing, and Security. It MAY include one table row linking `docs/architecture.md` as further reading. The Ajay Lamba author byline SHALL remain present but MUST NOT occupy the tagline slot. It SHALL NOT duplicate architecture body text, CLI encyclopedias, OpenSpec, or full OKF field lists.
 
-#### Scenario: README stays short
+#### Scenario: README stays a front door
 
 - **GIVEN** the project README
 - **WHEN** a first-time reader opens it
-- **THEN** they can state the purpose and benefit in one sentence
-- **AND** they can install and run `repocodex context` / `repocodex validate --diff`
+- **THEN** they can state the purpose and benefit in one sentence without requiring the words “OKF” or “attester”
+- **AND** they can see prerequisites, install, and run `repocodex context` / `repocodex validate --diff`
 - **AND** they are pointed at named docs for how it works, how to read memory, and how agents use the loop
+- **AND** they see a short illustrative example on the README itself
 
 #### Scenario: README does not replace docs
 
@@ -28,14 +29,21 @@ User-facing documentation layout, README scope, and the explanations readers MUS
 
 - **GIVEN** the project README
 - **WHEN** a reader wants engine architecture
-- **THEN** they can follow a link to `docs/research/architecture.md`
+- **THEN** they can follow a link to `docs/architecture.md`
 - **AND** that link is labeled as further reading, not a required first step
+
+#### Scenario: README may include OSS chrome
+
+- **GIVEN** the project README
+- **WHEN** a first-time reader looks for project status and contribution paths
+- **THEN** they MAY see a CI badge
+- **AND** they can follow links to License, Contributing, and Security when those files exist
 
 ### Requirement: README names the author without becoming a bio
 
-`README.md` SHALL include a short author byline that names Ajay Lamba and links the GitHub user or this repository, while remaining the front door (purpose, benefit, install, three commands, links to `docs/`). It SHALL NOT add a long personal bio or duplicate architecture.
+`README.md` SHALL include a short author byline that names Ajay Lamba and links the GitHub user or this repository, while remaining the front door (purpose, benefit, install, three commands, links to `docs/`). The byline MUST NOT occupy the tagline slot. It SHALL NOT add a long personal bio or duplicate architecture.
 
-#### Scenario: Byline is present and README stays short
+#### Scenario: Byline is present and README stays a front door
 
 - **GIVEN** the project README
 - **WHEN** a first-time reader opens it
@@ -49,15 +57,15 @@ The documentation tree SHALL use these files and no extra user-facing guides unl
 
 | File | Job |
 | --- | --- |
-| `README.md` | Front door: purpose, benefit, install, three commands, links |
-| `docs/how-it-works.md` | Core concepts and the retrieve → read code → edit → update why → pin-check loop |
-| `docs/memory.md` | How to read `.context/` (OKF v0.2): body is why, anchors pin live text, links, reverse index outside the bundle |
-| `docs/agents.md` | How coding agents (and optionally humans) run that loop so a change does not detach why from code |
-| `docs/install.md` | `repocodex install`, `.repocodex.toml` pin, hook, GitHub Action, optional `mcp` extra |
+| `README.md` | Front door: problem, purpose, benefit, not-X, prereqs, install, three commands, short example, links |
+| `docs/how-it-works.md` | Core concepts and the retrieve → get code → edit → update why → pin-check loop, including one concrete worked turn |
+| `docs/memory.md` | How to read `.context/` (OKF v0.2): body is why, anchors pin live text, links, reverse index outside the bundle; includes one minimal sample concept |
+| `docs/agents.md` | How coding agents (and optionally humans) run that loop so a change does not detach why from code; includes a short `repocodex write` sketch |
+| `docs/install.md` | `repocodex install`, `.repocodex.toml` pin, hook, GitHub Action, optional `mcp` extra; states first-hour contract and optional `bootstrap` |
 | `CONTRIBUTING.md` | How to contribute to the *engine* (tests, OpenSpec), not how to use memory in an application repo |
-| `docs/research/architecture.md` | Current engine architecture for OSS readers (components, data flow, interfaces as shipped); linked as further reading, not onboarding |
+| `docs/architecture.md` | Current engine architecture for OSS readers (components, data flow, interfaces as shipped); linked as further reading, not onboarding |
 
-A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of copy.
+A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of copy. The architecture document SHALL live at `docs/architecture.md` (not under `docs/research/architecture.md`).
 
 #### Scenario: A reader looking for one topic opens one file
 
@@ -70,12 +78,19 @@ A file SHALL NOT repeat another file's job. Cross-links SHALL be used instead of
 
 - **GIVEN** `docs/how-it-works.md`
 - **WHEN** a reader wants engine internals
-- **THEN** they are linked to `docs/research/architecture.md`
+- **THEN** they are linked to `docs/architecture.md`
 - **AND** they are not required to read it to understand purpose, benefit, and the loop
+
+#### Scenario: Architecture path resolves
+
+- **GIVEN** a clone of the repository
+- **WHEN** a reader follows any documented link to `docs/architecture.md`
+- **THEN** that file exists
+- **AND** its relative links to sibling user docs resolve
 
 ### Requirement: Readers can explain purpose, benefit, and the loop
 
-After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to reconstruct: RepoCodex stores *why* in an OKF bundle beside the code; agents retrieve that why and read the pinned source before editing; new work updates why in the same change, including the first substantive edit of an uncovered file; a deterministic pin check (ripgrep + git) attests that why is still attached to live text, and skipped-memory denies a change that recorded no why. The benefit is that institutional why cannot silently detach, which instruction files and tests do not guarantee.
+After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to reconstruct: RepoCodex stores *why* in an OKF bundle beside the code; agents retrieve that why and read the pinned source before editing; new work updates why in the same change, including the first substantive edit of an uncovered file; a deterministic pin check (ripgrep + git) attests that why is still attached to live text, and skipped-memory denies a change that recorded no why. The benefit is that institutional why cannot silently detach, which instruction files and tests do not guarantee. `docs/how-it-works.md` SHALL include one concrete worked turn (retrieve → edit that would break a pin or leave skipped-memory → validate outcome → write or restore) before or beside the abstract loop steps.
 
 #### Scenario: Purpose and benefit are explicit
 
@@ -95,13 +110,20 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 #### Scenario: Empty context still requires a write
 
 - **GIVEN** `docs/how-it-works.md`
-- **WHEN** it describes a substantive edit to a file with no retrieved concepts
+- **WHEN** it covers a substantive edit to a file with no retrieved concepts
 - **THEN** it states that the agent must write a pinning concept in the same change
 - **AND** that `LIVE` from validate is not success while `skipped_memory` is non-empty
 
+#### Scenario: Concrete turn is present
+
+- **GIVEN** `docs/how-it-works.md`
+- **WHEN** a first-time reader wants proof the loop matters
+- **THEN** they find one concrete worked turn with named files and validate outcomes
+- **AND** they are not required to read architecture to understand that turn
+
 ### Requirement: Memory docs teach how to read OKF, not how to reimplement it
 
-`docs/memory.md` SHALL explain enough of OKF v0.2 for a consumer of `.context/`: reserved `index.md` / `log.md`; concept files with `type`; body = why; `verification.anchors` and `claims` as RepoCodex extensions on the same file; markdown links for related why; reverse index at `.repocodex/reverse-index.md` (not inside the bundle); `verified` is definition review, not a gate stamp. It SHALL link the official OKF spec for field catalogs. It SHALL NOT require `type: Attested Computation` as the memory unit.
+`docs/memory.md` SHALL explain enough of OKF v0.2 for a consumer of `.context/`: reserved `index.md` / `log.md`; concept files with `type`; body = why; `verification.anchors` and `claims` as RepoCodex extensions on the same file; markdown links for related why; reverse index at `.repocodex/reverse-index.md` (not inside the bundle); `verified` is definition review, not a gate stamp. It SHALL include one minimal sample concept (frontmatter, short body, anchors, and at least one claim where illustrating `InvariantContract`). It SHALL link the official OKF spec for field catalogs. It SHALL NOT require `type: Attested Computation` as the memory unit.
 
 #### Scenario: An agent can open a concept file usefully
 
@@ -117,6 +139,13 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **THEN** it states that missing `verified` does not fail CI
 - **AND** that a passing pin check does not write `verified`
 
+#### Scenario: Sample concept is present
+
+- **GIVEN** `docs/memory.md`
+- **WHEN** a reader has never seen a concept file
+- **THEN** they can see one minimal sample concept in the doc
+- **AND** that sample shows body-as-why plus anchors (and a claim when the type requires it)
+
 ### Requirement: Memory docs state type intent and claims
 
 `docs/memory.md` SHALL state that `type` is author intent (catalog), that the four authored types may coexist on one change when they are distinct whys, and that `claims` are the binary token check (`CLAIM_BROKEN`) — with `InvariantContract` requiring claims as a must-hold token contract, not a general structural invariant.
@@ -131,7 +160,7 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 
 ### Requirement: Agent and optional-human docs describe anti-regression as the read loop plus pin check
 
-`docs/agents.md` SHALL be written for coding agents first. It SHALL tell them to retrieve context before edit, keep why intact unless they intend a why-change (`supersedes` + `rationale`), write a pinning concept when context was empty and the edit is substantive, commit `.context/` and `.repocodex/reverse-index.md` (and shards) with the code, treat `WRITE` / non-empty `skipped_memory` as an unfinished turn, and treat hook/CI failure as unrepaired pin breakage or skipped memory. It SHALL include a short orthogonal summary of the four authored types and one-concept-per-why volume, and SHALL state that the full when/how recipe lives in the installed coding skill. Humans MAY follow the same CLI; they are not required in the hot path. The document SHALL NOT present tests, human approval, or OKF trust tiers as the regression check.
+`docs/agents.md` SHALL be written for coding agents first. It SHALL tell them to retrieve context before edit, keep why intact unless they intend a why-change (`supersedes` + `rationale`), write a pinning concept when context was empty and the edit is substantive, commit `.context/` and `.repocodex/reverse-index.md` (and shards) with the code, treat `WRITE` / non-empty `skipped_memory` as an unfinished turn, and treat hook/CI failure as unrepaired pin breakage or skipped memory. It SHALL include a short orthogonal summary of the four authored types and one-concept-per-why volume, a short `repocodex write` sketch usable before the skill is installed, and SHALL state that the full when/how recipe lives in the installed coding skill. Humans MAY follow the same CLI; they are not required in the hot path. The document SHALL NOT present tests, human approval, or OKF trust tiers as the regression check.
 
 #### Scenario: Agent path is complete
 
@@ -162,9 +191,16 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **THEN** the doc summarizes the four orthogonal types and one-concept-per-why
 - **AND** it states that the installed coding skill is the full recipe
 
+#### Scenario: Write sketch is present
+
+- **GIVEN** `docs/agents.md`
+- **WHEN** an agent needs to discharge `skipped_memory` before the skill is opened
+- **THEN** the doc includes a short `repocodex write` sketch
+- **AND** it still points to the installed coding skill for the full type recipe
+
 ### Requirement: Install docs cover the mechanical floor only
 
-`docs/install.md` SHALL cover installing the CLI, `repocodex install` (hook, Action, skills), the `.repocodex.toml` engine pin, and that hook and CI wrap `repocodex validate`. Optional MCP belongs in this file as a separate step (`mcp` extra then `repocodex install --mcp`), not as part of the required floor. It SHALL NOT explain OKF or the agent loop.
+`docs/install.md` SHALL cover installing the CLI, `repocodex install` (hook, Action, skills), the `.repocodex.toml` engine pin, and that hook and CI wrap `repocodex validate`. After `repocodex install`, it SHALL state the first-hour contract: the next substantive edit of an uncovered eligible file is denied until a pinning concept is written in the same change, and MAY document optional `repocodex bootstrap` for brownfield seeding. Optional MCP belongs in this file as a separate step (`mcp` extra then `repocodex install --mcp`), not as part of the required floor. It SHALL NOT explain OKF or the agent loop.
 
 #### Scenario: Install is enough to get a blocking check
 
@@ -172,6 +208,13 @@ After reading `README.md` and `docs/how-it-works.md`, a reader SHALL be able to 
 - **WHEN** a maintainer follows it in an application repo
 - **THEN** they can install, pin the engine, and enable hook plus required CI
 - **AND** they are linked to `docs/how-it-works.md` for what the check means
+
+#### Scenario: First-hour contract is stated
+
+- **GIVEN** `docs/install.md`
+- **WHEN** a maintainer finishes `repocodex install`
+- **THEN** they are told that the next substantive edit of an uncovered file requires a pinning concept or the hook/CI denies
+- **AND** they MAY be pointed at optional `repocodex bootstrap` for seeding drafts
 
 ### Requirement: Install docs include optional MCP extra
 

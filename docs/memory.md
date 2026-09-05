@@ -1,6 +1,6 @@
 # How to read `.context/`
 
-RepoCodex memory is an [OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md) knowledge bundle at `.context/`. This page is a consumer guide: enough to open a concept usefully. Field catalogs live in the OKF spec; do not treat this file as a schema.
+RepoCodex memory is an [OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md) knowledge bundle at `.context/`. This page is a consumer guide: enough to open a file usefully. Field catalogs live in the OKF spec; do not treat this file as a schema.
 
 ## What lives in the bundle
 
@@ -13,7 +13,83 @@ RepoCodex memory is an [OKF v0.2](https://github.com/GoogleCloudPlatform/open-kn
 
 Reserved filenames at any level are only `index.md` and `log.md`. Everything else with a `type` is a concept.
 
-The reverse index is **not** a concept and is **not** in the bundle. It is generated at `.repocodex/reverse-index.md` (shards: `.repocodex/reverse-index/<escaped-context-parent>.md`). Do not look for `reverse-index.md` under `.context/`.
+The reverse index is **not** a concept and is **not** in the bundle. It is generated at `.repocodex/reverse-index.md` (shards: `.repocodex/reverse-index/<escaped-path-parent>.md`). Do not look for `reverse-index.md` under `.context/`.
+
+## Sample concepts
+
+Types are orthogonal. Identity folders: `decisions/`, `invariants/`, `workflows/`.
+
+### TechnicalDecision
+
+Identity: `decisions/capture-streams-retries` → `.context/decisions/capture-streams-retries.md`.
+
+```markdown
+---
+title: Capture streams enterprise retries instead of buffering
+type: TechnicalDecision
+status: stable
+verification:
+  engine: ripgrep
+  anchors:
+    - path: src/billing/PaymentGateway.ts
+      all_of: ["yield", "ENTERPRISE", "capturePayment"]
+---
+
+Enterprise capture is a generator so retries stay backpressure-aware. Do not
+replace with an in-memory list of attempts.
+```
+
+### InvariantContract
+
+Identity: `invariants/enterprise-grace` → `.context/invariants/enterprise-grace.md`.
+
+```markdown
+---
+title: Enterprise capture grace is three attempts
+type: InvariantContract
+status: stable
+verification:
+  engine: ripgrep
+  anchors:
+    - path: src/billing/PaymentGateway.ts
+      all_of: ["ENTERPRISE", "grace", "= 3"]
+      near: "capturePayment"
+claims:
+  - subject: enterprise_grace_attempts
+    literal: "3"
+---
+
+Enterprise plans get three capture retries before failure. Shrinking this
+window silently breaks the billing contract with customers on that tier.
+```
+
+Read the body as why. Follow `verification.anchors` into the source. `claims` freeze checkable literals; if `"3"` disappears from the matched region, validate reports `CLAIM_BROKEN`.
+
+### BusinessWorkflow
+
+Identity: `workflows/checkout-capture` → `.context/workflows/checkout-capture.md`.
+
+```markdown
+---
+title: Checkout capture flows api → billing → ledger
+type: BusinessWorkflow
+status: stable
+verification:
+  engine: ripgrep
+  anchors:
+    - path: src/api/checkout.ts
+      all_of: ["capturePayment", "billing"]
+    - path: src/billing/PaymentGateway.ts
+      all_of: ["capturePayment", "ledger"]
+    - path: src/ledger/posting.ts
+      all_of: ["postCapture", "idempotency"]
+---
+
+Checkout capture crosses api, billing, then ledger. Keep that order; do not
+post to the ledger from the API layer.
+```
+
+One anchor per participating site. The page stays thin: ordering and boundaries, not a dump of every step's construct why.
 
 ## Opening a concept
 
