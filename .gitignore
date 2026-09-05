@@ -9,3 +9,6 @@ dist/
 .repocodex/metrics.jsonl
 .tmpout/
 .tmptest/
+
+# Local OpenSpec change archives (brainstorming history). Do not publish.
+openspec/changes/archive/

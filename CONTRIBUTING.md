@@ -25,7 +25,7 @@ Public Python APIs use Google-style docstrings. `ruff check` enforces pydocstyle
 
 ## Specs
 
-Behavior changes go through [OpenSpec](https://github.com/Fission-AI/OpenSpec) in `openspec/`. Propose a change, keep `proposal.md` / `design.md` / delta specs / `tasks.md` aligned, then implement.
+Behavior changes go through [OpenSpec](https://github.com/Fission-AI/OpenSpec) in `openspec/`. Propose a change, keep `proposal.md` / `design.md` / delta specs / `tasks.md` aligned, then implement. Commit current specs under `openspec/specs/` and in-flight work under `openspec/changes/<name>/`. Do not commit `openspec/changes/archive/` — that directory is gitignored so local archive history stays off the public tree.
 
 ```bash
 openspec validate --all --strict
