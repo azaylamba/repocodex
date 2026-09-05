@@ -14,11 +14,14 @@ To run `repocodex mcp` locally, also install the optional extra: `pip install -e
 
 ## Tests
 
-Engine-package tests pin the CLI and the attester. They are not how application scenarios are verified. GitHub Actions on this repository runs the same suite on pull requests and on push to `main` (Python 3.11, ripgrep, `pip install -e ".[dev]"`, pytest).
+Engine-package tests pin the CLI and the attester. They are not how application scenarios are verified. GitHub Actions on this repository runs the same suite on pull requests and on push to `main` (Python 3.11, ripgrep, `pip install -e ".[dev]"`, ruff docstring check, pytest).
 
 ```bash
+ruff check src tests
 pytest
 ```
+
+Public Python APIs use Google-style docstrings. `ruff check` enforces pydocstyle (Google) on `src/` and `tests/`. Test modules need a module docstring only; `test_*` functions do not.
 
 ## Specs
 

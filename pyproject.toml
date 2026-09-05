@@ -25,6 +25,7 @@ Issues = "https://github.com/azaylamba/repocodex/issues"
 [project.optional-dependencies]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.12.0",
 ]
 mcp = [
     "mcp>=2.1.1",
@@ -44,3 +45,17 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q"
 filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["D"]
+ignore = ["D105", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_*.py" = ["D101", "D102", "D103"]
