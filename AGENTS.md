@@ -17,7 +17,7 @@ Packaged installables (skills, rules, hooks) live under `src/repocodex/data/`. D
 
 RepoCodex stores git-native *why* next to code and attests attachment with a deterministic pin check (ripgrep + git). Instruction files and test suites do not give that guarantee.
 
-This checkout builds that engine. Audience: coding agents first. Engine pytest pins CLI and attester behavior; it is not how application scenarios are verified. Do not rewrite `docs/research/architecture.md` as a side effect of a small change; update it when the current system design actually moved. Do not commit `docs/research/design-history.md`; it is gitignored local research.
+This checkout builds that engine. Audience: coding agents first. Engine pytest pins CLI and attester behavior; it is not how application scenarios are verified. Do not rewrite `docs/research/architecture.md` as a side effect of a small change; update it when the current system design actually moved. Do not commit `docs/research/design-history.md` or `docs/superpowers/`; both are gitignored local research.
 
 ## Layout
 
