@@ -89,16 +89,16 @@ post to the ledger from the API layer.
 
 ## Docs
 
-| Doc                                  | Job                                                                            |
-| ------------------------------------ | ------------------------------------------------------------------------------ |
-| [How it works](docs/how-it-works.md) | Purpose, benefit, and the retrieve → read → edit → update why → pin-check loop |
-| [Memory](docs/memory.md)             | How to read `.context/`                                                        |
-| [Agents](docs/agents.md)             | How coding agents (and optionally humans) run the loop                         |
-| [Install](docs/install.md)           | CLI, pin, hook, GitHub Action, optional MCP                                    |
-| [Architecture](docs/architecture.md) | Current engine architecture (further reading)                                  |
+| Doc | Job |
+| --- | --- |
+| [How it works](https://github.com/azaylamba/repocodex/blob/main/docs/how-it-works.md) | Purpose, benefit, and the retrieve → read → edit → update why → pin-check loop |
+| [Memory](https://github.com/azaylamba/repocodex/blob/main/docs/memory.md) | How to read `.context/` |
+| [Agents](https://github.com/azaylamba/repocodex/blob/main/docs/agents.md) | How coding agents (and optionally humans) run the loop |
+| [Install](https://github.com/azaylamba/repocodex/blob/main/docs/install.md) | CLI, pin, hook, GitHub Action, optional MCP |
+| [Architecture](https://github.com/azaylamba/repocodex/blob/main/docs/architecture.md) | Current engine architecture (further reading) |
 
 ## License and contributing
 
-[MIT](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[MIT](https://github.com/azaylamba/repocodex/blob/main/LICENSE) · [Contributing](https://github.com/azaylamba/repocodex/blob/main/CONTRIBUTING.md) · [Security](https://github.com/azaylamba/repocodex/blob/main/SECURITY.md)
 
 Created by [Ajay Lamba](https://github.com/azaylamba/repocodex).
