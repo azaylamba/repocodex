@@ -34,7 +34,7 @@ repocodex install
 
 This writes:
 
-- `.git/hooks/pre-commit` — runs `repocodex validate --diff --staged --hook`
+- `.git/hooks/pre-commit` — runs `repocodex validate --diff --staged --hook` using the same install that ran this command (project `.venv` or system-wide). Re-run `repocodex install` after you switch interpreters.
 - `.github/workflows/repocodex.yml` — required (deterministic) check plus an advisory job
 - coding and review skills under `.cursor/skills/` and `.claude/skills/`
 - `.repocodex.toml` if it does not already exist

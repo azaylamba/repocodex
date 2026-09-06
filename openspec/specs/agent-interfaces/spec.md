@@ -23,6 +23,30 @@ The system SHALL expose all functionality through a CLI — `validate`, `write`,
 - **WHEN** `repocodex bootstrap` mines git history, comments, and docs
 - **THEN** only gate-passing concepts are kept, marked `status: draft` with `stale_after` and mandatory `sources`
 
+### Requirement: Install binds the local git hook to the running engine
+
+`repocodex install` SHALL write `.git/hooks/pre-commit` so that it invokes the RepoCodex CLI from the same install that ran the command — the venv console script when install ran from a virtualenv, or the system-wide interpreter/script when install ran from a system-wide install. The bound path SHALL be preferred over whatever `python3` happens to be first on PATH when `git commit` runs. The committed plugin hook copy SHALL NOT contain a machine-specific absolute path.
+
+#### Scenario: Venv install binds the venv CLI
+
+- **GIVEN** RepoCodex is installed in the repository `.venv`
+- **WHEN** `repocodex install` runs using that venv
+- **THEN** `.git/hooks/pre-commit` names that venv's `repocodex` executable or interpreter
+- **AND** a `git commit` whose PATH does not include the venv still invokes that bound CLI
+
+#### Scenario: System-wide install binds the system CLI
+
+- **GIVEN** RepoCodex is installed system-wide
+- **WHEN** `repocodex install` runs using that system install
+- **THEN** `.git/hooks/pre-commit` names that system-wide `repocodex` executable or interpreter
+
+#### Scenario: Plugin hook stays portable
+
+- **GIVEN** `repocodex install` has written `.repocodex/plugin/hooks/pre-commit`
+- **WHEN** that file is inspected
+- **THEN** it does not contain the machine-specific bind written into `.git/hooks/pre-commit`
+- **AND** it still discovers a repository `.venv` or `venv` `repocodex` before falling back to PATH or `python3 -m repocodex`
+
 ### Requirement: Coding-agent skill
 
 The system SHALL ship a coding-agent skill enforcing the loop: retrieve context before editing, run the impact recipe on the diff, validate before ending the turn, apply REANCHOR patches, repair DRIFT via `reconcile`/`write` in the same change, and write gate-passing concept(s) when `result` is `WRITE` or `skipped_memory` is non-empty — with anchor-authoring guidance that prefers stable tokens over renameable identifiers. `LIVE` / `WEAK` SHALL mean proceed only when `skipped_memory` is empty.

@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import os
 import stat
+import subprocess
+import sys
 from pathlib import Path
 
 from repocodex.commands.install import install
@@ -97,3 +99,76 @@ def test_install_writes_default_pin_and_pypi_action(tmp_path: Path):
     action = (tmp_path / ".github" / "workflows" / "repocodex.yml").read_text(encoding="utf-8")
     assert 'pip install "repocodex==${PIN}"' in action
     assert "git+https://github.com/azaylamba/repocodex.git" not in action
+
+
+def _running_cli_paths() -> tuple[str, str]:
+    """Return the console script (if any) and interpreter for this process."""
+    python = sys.executable
+    script = Path(sys.executable).parent / "repocodex"
+    return (str(script) if script.is_file() else "", python)
+
+
+def test_install_hook_binds_running_cli(tmp_path: Path):
+    (tmp_path / "README.md").write_text("sample\n", encoding="utf-8")
+    init_git_repo(tmp_path)
+    payload = install(tmp_path)
+    assert payload["ok"] is True
+    hook = (tmp_path / ".git" / "hooks" / "pre-commit").read_text(encoding="utf-8")
+    script, python = _running_cli_paths()
+    if script:
+        assert script in hook
+    assert python in hook
+
+
+def test_plugin_hook_stays_portable_and_discovers_venv(tmp_path: Path):
+    (tmp_path / "README.md").write_text("sample\n", encoding="utf-8")
+    init_git_repo(tmp_path)
+    install(tmp_path)
+    git_hook = (tmp_path / ".git" / "hooks" / "pre-commit").read_text(encoding="utf-8")
+    plugin_hook = (tmp_path / ".repocodex" / "plugin" / "hooks" / "pre-commit").read_text(
+        encoding="utf-8"
+    )
+    script, python = _running_cli_paths()
+    bound = script or python
+    assert bound in git_hook
+    assert bound not in plugin_hook
+    assert ".venv/bin/repocodex" in plugin_hook
+    assert "venv/bin/repocodex" in plugin_hook
+
+
+def _run_hook(hook: Path, cwd: Path) -> subprocess.CompletedProcess[str]:
+    """Run a pre-commit hook with a PATH that cannot see a venv CLI."""
+    env = os.environ.copy()
+    env["PATH"] = "/usr/bin:/bin"
+    env.pop("VIRTUAL_ENV", None)
+    env.pop("PYTHONPATH", None)
+    return subprocess.run(
+        ["sh", str(hook)],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+
+def test_hook_uses_bound_cli_when_path_lacks_venv(tmp_path: Path):
+    (tmp_path / "README.md").write_text("sample\n", encoding="utf-8")
+    init_git_repo(tmp_path)
+    install(tmp_path)
+    result = _run_hook(tmp_path / ".git" / "hooks" / "pre-commit", tmp_path)
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert "No module named repocodex" not in combined
+
+
+def test_portable_hook_discovers_repo_venv(tmp_path: Path):
+    (tmp_path / "README.md").write_text("sample\n", encoding="utf-8")
+    init_git_repo(tmp_path)
+    install(tmp_path)
+    stub_dir = tmp_path / ".venv" / "bin"
+    stub_dir.mkdir(parents=True)
+    stub = stub_dir / "repocodex"
+    stub.write_text("#!/bin/sh\necho STUB_VENV\nexit 0\n", encoding="utf-8")
+    stub.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+    result = _run_hook(tmp_path / ".repocodex" / "plugin" / "hooks" / "pre-commit", tmp_path)
+    assert "STUB_VENV" in f"{result.stdout}\n{result.stderr}"

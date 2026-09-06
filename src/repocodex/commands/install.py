@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
 import stat
+import sys
 
 from repocodex import ENGINE_VERSION
 from repocodex.mcp_server import MCP_EXTRA_HINT, mcp_extra_available
 from repocodex.schema import envelope
+
+_HOOK_CLI_TOKEN = "'__REPOCODEX_HOOK_CLI__'"
+_HOOK_PYTHON_TOKEN = "'__REPOCODEX_HOOK_PYTHON__'"
 
 
 def _data_path(*parts: str) -> Path:
@@ -22,6 +27,46 @@ def _copy(src: Path, dest: Path) -> None:
     """Copy ``src`` to ``dest``, creating parent directories as needed."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dest)
+
+
+def resolve_install_binding() -> tuple[str, str]:
+    """Return console-script and interpreter paths for the running install.
+
+    Prefers a ``repocodex`` executable next to ``sys.executable`` (venv or
+    system Scripts/bin). Always returns the current interpreter so the hook
+    can fall back to ``python -m repocodex`` from the same environment.
+
+    Returns:
+        A pair of ``(cli_script, python_executable)``. ``cli_script`` is
+        empty when no executable sits next to the interpreter.
+    """
+    # Keep the venv console stub. Path.resolve() follows it to the
+    # framework interpreter, which does not have the package.
+    python = sys.executable
+    script = Path(python).parent / "repocodex"
+    cli = str(script) if script.is_file() and os.access(script, os.X_OK) else ""
+    return cli, python
+
+
+def _sh_single_quote(value: str) -> str:
+    """Return ``value`` wrapped in POSIX single quotes."""
+    return "'" + value.replace("'", "'\\''") + "'"
+
+
+def render_pre_commit_hook(template: str, *, cli: str = "", python: str = "") -> str:
+    """Fill install-time CLI bind placeholders in a pre-commit hook template.
+
+    Args:
+        template: Hook script text containing ``__REPOCODEX_HOOK_CLI__`` tokens.
+        cli: Absolute path to a ``repocodex`` console script, if any.
+        python: Absolute path to the interpreter that has the package.
+
+    Returns:
+        Hook text with quoted bind paths substituted.
+    """
+    return template.replace(_HOOK_CLI_TOKEN, _sh_single_quote(cli)).replace(
+        _HOOK_PYTHON_TOKEN, _sh_single_quote(python)
+    )
 
 
 def _resolvable(path: Path) -> bool:
@@ -61,7 +106,14 @@ def install(
         if not hook_src.exists():
             failed.append("hooks/pre-commit (missing from distribution)")
         else:
-            _copy(hook_src, hook_dest)
+            cli, python = resolve_install_binding()
+            text = render_pre_commit_hook(
+                hook_src.read_text(encoding="utf-8"),
+                cli=cli,
+                python=python,
+            )
+            hook_dest.parent.mkdir(parents=True, exist_ok=True)
+            hook_dest.write_text(text, encoding="utf-8")
             hook_dest.chmod(hook_dest.stat().st_mode | stat.S_IEXEC)
             if _resolvable(hook_dest):
                 installed.append(str(hook_dest.relative_to(repo)))

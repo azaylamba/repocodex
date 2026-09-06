@@ -16,6 +16,17 @@ The system SHALL install a git pre-commit hook that denies commits while any val
 - **WHEN** the agent attempts to commit
 - **THEN** the hook denies the commit and returns the RECONCILE JSON
 
+### Requirement: Pre-commit hook uses the install-bound CLI
+
+The installed git pre-commit hook SHALL invoke the RepoCodex CLI bound at `repocodex install` time. If that bound path is missing, it SHALL fall back to `$VIRTUAL_ENV/bin/repocodex`, then a repository `.venv` or `venv` console script, then `repocodex` on PATH, then `python3 -m repocodex`. A missing module because the hook used the wrong interpreter SHALL still deny the commit.
+
+#### Scenario: Commit uses the bound interpreter when PATH is empty of the venv
+
+- **GIVEN** a repository whose engine was installed into `.venv` and whose git hook was written by that install
+- **AND** `git commit` runs with a PATH that does not include `.venv/bin`
+- **WHEN** the pre-commit hook runs
+- **THEN** it invokes the bound venv CLI rather than system `python3 -m repocodex`
+
 ### Requirement: Deterministic required CI check
 
 The system SHALL provide a stateless CI check, intended for branch protection, that fails only on deterministic outcomes: unrepaired DRIFT on stable anchors, the skipped-memory ratchet, and reverse-index desync. It SHALL NOT fail because `.context/` changed, because a WEAK anchor degraded, or on any agent-judged finding.

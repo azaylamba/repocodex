@@ -275,7 +275,7 @@ Important keys (not exhaustive):
 
 `repocodex install` writes:
 
-- `.git/hooks/pre-commit` → `repocodex validate --diff --staged --hook`
+- `.git/hooks/pre-commit` → bound CLI `validate --diff --staged --hook` (venv or system-wide install that ran `repocodex install`)
 - `.github/workflows/repocodex.yml` — required job (`validate --check`) + advisory job (`repocodex advisory`, `continue-on-error`)
 - Skills under `.cursor/skills/` and `.claude/skills/`
 - Cursor rule `.cursor/rules/repocodex.mdc` and a Claude pointer in `CLAUDE.md` when appropriate

@@ -3,16 +3,46 @@
 # Filters `git commit` here rather than relying on client-side file matchers.
 # Denies the commit while any validated anchor on the staged diff is DRIFT
 # (unless posture=shadow).
+#
+# `repocodex install` fills HOOK_CLI / HOOK_PYTHON on .git/hooks/pre-commit
+# from the install that ran the command. The plugin copy leaves them empty.
 
 set -e
 
-if command -v repocodex >/dev/null 2>&1; then
-  CMD="repocodex"
-else
-  CMD="python3 -m repocodex"
-fi
+HOOK_CLI='__REPOCODEX_HOOK_CLI__'
+HOOK_PYTHON='__REPOCODEX_HOOK_PYTHON__'
 
-output="$($CMD validate --diff --staged --hook)" || status=$?
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+run_repocodex() {
+  if [ -n "$HOOK_CLI" ] && [ "$HOOK_CLI" != "__REPOCODEX_HOOK_CLI__" ] && [ -x "$HOOK_CLI" ]; then
+    "$HOOK_CLI" "$@"
+    return $?
+  fi
+  if [ -n "$HOOK_PYTHON" ] && [ "$HOOK_PYTHON" != "__REPOCODEX_HOOK_PYTHON__" ] && [ -x "$HOOK_PYTHON" ]; then
+    "$HOOK_PYTHON" -m repocodex "$@"
+    return $?
+  fi
+  if [ -n "${VIRTUAL_ENV:-}" ] && [ -x "$VIRTUAL_ENV/bin/repocodex" ]; then
+    "$VIRTUAL_ENV/bin/repocodex" "$@"
+    return $?
+  fi
+  if [ -x "$repo_root/.venv/bin/repocodex" ]; then
+    "$repo_root/.venv/bin/repocodex" "$@"
+    return $?
+  fi
+  if [ -x "$repo_root/venv/bin/repocodex" ]; then
+    "$repo_root/venv/bin/repocodex" "$@"
+    return $?
+  fi
+  if command -v repocodex >/dev/null 2>&1; then
+    command repocodex "$@"
+    return $?
+  fi
+  python3 -m repocodex "$@"
+}
+
+output="$(run_repocodex validate --diff --staged --hook)" || status=$?
 status=${status:-0}
 echo "$output"
 if [ "$status" -ne 0 ]; then
