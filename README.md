@@ -8,6 +8,8 @@ Coding agents write syntax well and forget _why_. Comments rot. Instruction file
 
 RepoCodex stores that why in git beside the code. Agents retrieve it before they edit. A deterministic pin check (ripgrep + git) attests the attachment. Built for repositories where coding agents make the changes.
 
+https://github.com/user-attachments/assets/6142a58f-ccb0-4878-9726-c121ca39e41a
+
 **Not** a test suite. **Not** another instruction file. **Not** a linter.
 
 Experimental. Requires Python 3.11+ and [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) on `PATH`.
