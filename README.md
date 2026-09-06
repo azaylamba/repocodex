@@ -10,17 +10,17 @@ RepoCodex stores that why in git beside the code. Agents retrieve it before they
 
 **Not** a test suite. **Not** another instruction file. **Not** a linter.
 
-Experimental `0.0.1`. Requires Python 3.11+ and [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) on `PATH`.
+Experimental. Requires Python 3.11+ and [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) on `PATH`.
 
 ## Install
 
 ```bash
-pip install "repocodex==0.0.1"
+pip install "repocodex==<engine_version>"
 # or from a local clone: pip install -e .
 repocodex install
 ```
 
-`repocodex install` writes the pre-commit hook, GitHub Action, agent skills, and `.repocodex.toml` (engine pin). The product is that loop: agents retrieve stored why before they edit, so they do not silently break existing behavior; the pin check fails the turn when why and code diverge, and a first substantive edit of an uncovered file is denied until a pinning concept is written.
+`repocodex install` writes the pre-commit hook, GitHub Action, agent skills, and `.repocodex.toml` pinned to the installed package (`ENGINE_VERSION`). Hook, local CLI, and CI must run that same version. The product is that loop: agents retrieve stored why before they edit, so they do not silently break existing behavior; the pin check fails the turn when why and code diverge, and a first substantive edit of an uncovered file is denied until a pinning concept is written.
 
 ```bash
 repocodex context src/billing/PaymentGateway.ts   # retrieve why before edit

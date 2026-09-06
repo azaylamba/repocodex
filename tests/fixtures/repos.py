@@ -11,6 +11,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from repocodex import ENGINE_VERSION
+
 PAYMENT_GATEWAY = '''\
 export async function capturePayment(account: Account): Promise<void> {
   if (account.plan === "ENTERPRISE") {
@@ -157,13 +159,25 @@ okf_version: "0.2"
 # Context catalog
 '''
 
-DEFAULT_CONFIG = '''\
-engine_version = "0.0.1"
+DEFAULT_CONFIG = f'''\
+engine_version = "{ENGINE_VERSION}"
 posture = "ratchet"
 distinctiveness_ceiling = 200
 scope_lines = 40
 exclusions = ["vendor/**", "node_modules/**", "dist/**"]
 '''
+
+
+def engine_pin(*, posture: str = "shadow") -> str:
+    """Return a `.repocodex.toml` body pinned to the running engine.
+
+    Args:
+        posture: Rollout posture to write.
+
+    Returns:
+        TOML text with ``engine_version`` and ``posture``.
+    """
+    return f'engine_version = "{ENGINE_VERSION}"\nposture = "{posture}"\n'
 
 
 @dataclass

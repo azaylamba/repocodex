@@ -1,6 +1,6 @@
 {
   "name": "repocodex",
-  "version": "0.0.1",
+  "version": "__ENGINE_VERSION__",
   "description": "Executable repository memory: context, impact, attested writes, and deterministic validation.",
   "skills": "./skills",
   "mcp": "./mcp.json"

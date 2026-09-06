@@ -10,12 +10,13 @@ import json
 import os
 from pathlib import Path
 
+from repocodex import ENGINE_VERSION
 from repocodex.commands.validate import validate
-from repocodex.engine.gate import evaluate_write
 from repocodex.config import load_config
+from repocodex.engine.gate import evaluate_write
 from repocodex.schema import parse_concept
 from tests.conftest import run_cli
-from tests.fixtures.repos import GRACE_CONCEPT, PAYMENT_GATEWAY
+from tests.fixtures.repos import GRACE_CONCEPT, PAYMENT_GATEWAY, engine_pin
 
 
 def test_claim_broken_when_literal_changes_and_anchor_stays(repo):
@@ -184,7 +185,7 @@ def test_missing_subject_stays_silent(repo):
 
 def test_shadow_reports_skipped_memory_and_blocks(repo):
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "0.0.1"\nposture = "shadow"\n',
+        engine_pin(posture="shadow"),
         encoding="utf-8",
     )
     _append_outside_region(repo.streamer, "def refund_batches():\n    return []\n")
@@ -195,7 +196,7 @@ def test_shadow_reports_skipped_memory_and_blocks(repo):
 
 def test_shadow_reports_claim_breakage_without_blocking(repo):
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "0.0.1"\nposture = "shadow"\n',
+        engine_pin(posture="shadow"),
         encoding="utf-8",
     )
     repo.payment_gateway.write_text(
@@ -228,7 +229,7 @@ def test_engine_pin_mismatch_fails_loudly(repo):
     payload = json.loads(result.stdout)
     assert payload["error"] == "engine_version_mismatch"
     assert payload["pinned"] == "9.9.9"
-    assert payload["running"] == "0.0.1"
+    assert payload["running"] == ENGINE_VERSION
     assert "result" not in payload
 
 

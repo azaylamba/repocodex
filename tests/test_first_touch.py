@@ -13,10 +13,10 @@ from pathlib import Path
 from repocodex.commands.validate import validate
 from repocodex.commands.write import write_memory
 from tests.conftest import run_cli
-from tests.fixtures.repos import STREAMER
+from tests.fixtures.repos import STREAMER, engine_pin
 
-SHADOW_TOML = 'engine_version = "0.0.1"\nposture = "shadow"\n'
-RATCHET_TOML = 'engine_version = "0.0.1"\nposture = "ratchet"\n'
+SHADOW_TOML = engine_pin(posture="shadow")
+RATCHET_TOML = engine_pin(posture="ratchet")
 FIRST_TOUCH_SOURCE = 'def main():\n    FIRST_TOUCH_QZX9 = 1\n    return FIRST_TOUCH_QZX9\n'
 FIRST_TOUCH_CONCEPT = """\
 ---

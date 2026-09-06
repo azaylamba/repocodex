@@ -15,12 +15,13 @@ from pathlib import Path
 
 from repocodex.commands.install import install
 from repocodex.commands.validate import validate
-from tests.fixtures.repos import init_git_repo
+from tests.fixtures.repos import engine_pin, init_git_repo
+from repocodex import ENGINE_VERSION
 
 
 def test_brownfield_uncovered_fails_first_touch(uncovered_repo: Path):
     (uncovered_repo / ".repocodex.toml").write_text(
-        'engine_version = "0.0.1"\nposture = "ratchet"\n',
+        engine_pin(posture="ratchet"),
         encoding="utf-8",
     )
     (uncovered_repo / "src" / "app.py").write_text("def main():\n    return 2\n", encoding="utf-8")
@@ -95,7 +96,7 @@ def test_install_writes_default_pin_and_pypi_action(tmp_path: Path):
     payload = install(tmp_path)
     assert payload["ok"] is True
     pin = (tmp_path / ".repocodex.toml").read_text(encoding="utf-8")
-    assert 'engine_version = "0.0.1"' in pin
+    assert f'engine_version = "{ENGINE_VERSION}"' in pin
     action = (tmp_path / ".github" / "workflows" / "repocodex.yml").read_text(encoding="utf-8")
     assert 'pip install "repocodex==${PIN}"' in action
     assert "git+https://github.com/azaylamba/repocodex.git" not in action

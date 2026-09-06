@@ -21,7 +21,7 @@ jobs:
       - name: Install RepoCodex (pinned)
         run: |
           PIN=$(python3 -c "import tomllib,pathlib; p=pathlib.Path('.repocodex.toml');
-print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '0.0.1')")
+print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '__ENGINE_VERSION__')")
           pip install "repocodex==${PIN}"
       - name: Resolve memory-exempt acknowledgment
         id: ack
@@ -79,7 +79,7 @@ print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '0.0.1')
       - name: Install RepoCodex (pinned)
         run: |
           PIN=$(python3 -c "import tomllib,pathlib; p=pathlib.Path('.repocodex.toml');
-print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '0.0.1')")
+print(tomllib.loads(p.read_text())['engine_version'] if p.exists() else '__ENGINE_VERSION__')")
           pip install "repocodex==${PIN}"
       - name: Advisory findings
         run: |

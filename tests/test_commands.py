@@ -11,13 +11,14 @@ from pathlib import Path
 
 from tests.conftest import run_cli
 from tests.fixtures.repos import GRACE_CONCEPT
+from repocodex import ENGINE_VERSION
 
 
 def test_validate_json_engine_version(repo):
     result = run_cli(["validate", "--diff"], cwd=repo.root)
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["engine_version"] == "0.0.1"
+    assert payload["engine_version"] == ENGINE_VERSION
 
 
 def test_context_staged_retrieval(repo):

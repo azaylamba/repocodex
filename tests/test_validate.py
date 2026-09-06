@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 
 from repocodex.commands.validate import validate
-from tests.fixtures.repos import PAYMENT_GATEWAY, STREAMER
+from tests.fixtures.repos import PAYMENT_GATEWAY, STREAMER, engine_pin
+from repocodex import ENGINE_VERSION
 
 
 def test_validate_live_on_formatting(repo):
@@ -20,7 +21,7 @@ def test_validate_live_on_formatting(repo):
     payload = validate(repo.root, all_concepts=False)
     classes = {item["classification"] for item in payload["outcomes"] if "enterprise" in item["concept"]}
     assert "LIVE" in classes
-    assert payload["engine_version"] == "0.0.1"
+    assert payload["engine_version"] == ENGINE_VERSION
     assert "impacted_scenarios" in payload
 
 
@@ -80,7 +81,7 @@ def test_dilution_warning_on_unrelated_pr(repo):
 
 def test_shadow_posture_does_not_block_on_claim_alone(repo):
     (repo.root / ".repocodex.toml").write_text(
-        'engine_version = "0.0.1"\nposture = "shadow"\n',
+        engine_pin(posture="shadow"),
         encoding="utf-8",
     )
     repo.payment_gateway.write_text(

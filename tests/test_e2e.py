@@ -12,6 +12,7 @@ from pathlib import Path
 
 from tests.conftest import run_cli
 from tests.fixtures.repos import PAYMENT_GATEWAY
+from repocodex import ENGINE_VERSION
 
 
 def test_agent_loop_context_edit_validate_commit(repo):
@@ -22,7 +23,7 @@ def test_agent_loop_context_edit_validate_commit(repo):
         encoding="utf-8",
     )
     verdict = json.loads(run_cli(["validate", "--diff"], cwd=repo.root).stdout)
-    assert verdict["engine_version"] == "0.0.1"
+    assert verdict["engine_version"] == ENGINE_VERSION
     repair = json.loads(run_cli(["repair"], cwd=repo.root).stdout)
     assert "engine_version" in repair
     subprocess.run(["git", "add", "-A"], cwd=repo.root, check=True, capture_output=True)

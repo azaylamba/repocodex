@@ -9,7 +9,7 @@ import shutil
 import stat
 import sys
 
-from repocodex import ENGINE_VERSION
+from repocodex import ENGINE_VERSION, render_engine_version
 from repocodex.mcp_server import MCP_EXTRA_HINT, mcp_extra_available
 from repocodex.schema import envelope
 
@@ -27,6 +27,12 @@ def _copy(src: Path, dest: Path) -> None:
     """Copy ``src`` to ``dest``, creating parent directories as needed."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dest)
+
+
+def _copy_substituted(src: Path, dest: Path) -> None:
+    """Copy ``src`` to ``dest``, filling the engine-version token."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(render_engine_version(src.read_text(encoding="utf-8")), encoding="utf-8")
 
 
 def resolve_install_binding() -> tuple[str, str]:
@@ -125,7 +131,7 @@ def install(
     if not action_src.exists():
         failed.append("action/repocodex.yml (missing from distribution)")
     else:
-        _copy(action_src, action_dest)
+        _copy_substituted(action_src, action_dest)
         if _resolvable(action_dest):
             installed.append(str(action_dest.relative_to(repo)))
         else:
@@ -183,6 +189,12 @@ def install(
         plugin_dest = repo / ".repocodex" / "plugin"
         if plugin_src.exists():
             shutil.copytree(plugin_src, plugin_dest, dirs_exist_ok=True)
+            plugin_json = plugin_dest / "plugin.json"
+            if plugin_json.is_file():
+                plugin_json.write_text(
+                    render_engine_version(plugin_json.read_text(encoding="utf-8")),
+                    encoding="utf-8",
+                )
             for hook in (plugin_dest / "hooks").glob("*"):
                 if hook.is_file():
                     hook.chmod(hook.stat().st_mode | stat.S_IEXEC)

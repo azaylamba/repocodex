@@ -152,9 +152,9 @@ The GitHub Action that `repocodex install` writes SHALL install the engine at th
 
 #### Scenario: Required job uses the pinned engine
 
-- **GIVEN** a repository where `repocodex install` has written `.github/workflows/repocodex.yml` and `.repocodex.toml` with `engine_version = "0.0.1"`
+- **GIVEN** a repository where `repocodex install` has written `.github/workflows/repocodex.yml` and `.repocodex.toml` pinning `engine_version` to the running engine
 - **WHEN** the required check job installs the engine
-- **THEN** the installed engine version is `0.0.1`
+- **THEN** the installed engine version matches that pin
 - **AND** the job invokes `repocodex validate` with `--check`
 
 ### Requirement: Portable distribution

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repocodex"
-version = "0.0.1"
+dynamic = ["version"]
 description = "Repository-native executable memory for coding agents"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -39,6 +39,9 @@ repocodex = "repocodex.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "repocodex.ENGINE_VERSION"}
 
 [tool.setuptools.package-data]
 repocodex = ["data/**/*"]

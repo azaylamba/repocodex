@@ -1,6 +1,6 @@
 # RepoCodex engine architecture
 
-**Status:** Current system (experimental `0.0.1`)  
+**Status:** Current system (experimental)  
 **Audience:** Open-source users and engine contributors
 
 RepoCodex is a repository-native **executable memory** framework for coding agents (and review agents on the same interfaces). It stores *why code exists* next to the code in git, proves each record is about live text with a deterministic attester (ripgrep + git), and serves scoped context through a CLI, packaged skills, and an optional MCP wrapper.
@@ -261,7 +261,7 @@ Important keys (not exhaustive):
   "repair_tasks": [],
   "false_drift_rate": 0.0,
   "latency_ms": 12.3,
-  "engine_version": "0.0.1"
+  "engine_version": "<running>"
 }
 ```
 
