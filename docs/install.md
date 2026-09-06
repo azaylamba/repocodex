@@ -41,7 +41,7 @@ This writes:
 
 ### First hour after install
 
-Default posture is `shadow`, but **undischarged skipped-memory still blocks**. The next substantive edit of an uncovered eligible source file is denied by the hook and `--check` until a pinning concept is written in the same change. That is intentional: empty context is not a free pass.
+Default posture is `shadow`, but **undischarged skipped-memory still blocks**. The next substantive edit of an uncovered eligible source file is denied by the hook and `--check` until a pinning concept is written in the same change. That is intentional: empty context is not a free pass. Files `repocodex install` writes (skills, Cursor rule, `CLAUDE.md` pointer, Action, plugin tree) do not arm first-touch by themselves.
 
 For a brownfield repo with many uncovered files, optionally seed draft `TechnicalDecision` pages first:
 

@@ -189,7 +189,7 @@ Never blocks solely because `.context/` changed, WEAK degraded, dilution warned,
 
 - Substantive edit to a **covered** file arms unless a concept *pinning that file* was added/modified in the same change, **or** every substantive hunk falls inside a matched region of an attesting anchor.
 - A LIVE classification alone does **not** discharge the whole file.
-- Substantive edit to an **uncovered** eligible file arms first-touch (`uncovered_file_without_memory`); result is `WRITE` until a pinning concept is written. Lockfiles and gitignore-class basenames do not arm.
+- Substantive edit to an **uncovered** eligible file arms first-touch (`uncovered_file_without_memory`); result is `WRITE` until a pinning concept is written. Lockfiles, gitignore-class basenames, and `repocodex install` artefacts (skills, Cursor rule, `CLAUDE.md` pointer, Action, plugin tree) do not arm.
 - Comment/whitespace-only edits do not arm. Working-tree scope diffs against `HEAD`.
 
 ### Tree mutation honesty

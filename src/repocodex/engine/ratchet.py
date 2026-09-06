@@ -209,19 +209,23 @@ def _identities_pinning_path(path: str, concepts: list[ConceptDocument]) -> set[
 
 
 def _is_memory_path(normalized: str) -> bool:
-    """Return True when ``normalized`` is a managed memory or skill artefact."""
-    # Plugin-managed skill copies live under .repocodex/plugin/, .claude/skills/,
-    # and .cursor/skills/.  They are auto-generated artefacts, not source files,
-    # so they must not arm first-touch.
-    _PLUGIN_PREFIXES = (
+    """Return True when ``normalized`` is managed memory or install wiring."""
+    # `repocodex install` writes skills, Cursor/Claude rules, the plugin tree,
+    # CLAUDE.md, and the pin-check Action. Those are harness artefacts, not
+    # application source, so they must not arm first-touch.
+    prefixes = (
         ".context/",
         ".repocodex/",
-        ".claude/skills/",
-        ".cursor/skills/",
+        ".claude/",
+        ".cursor/",
     )
+    files = {".github/workflows/repocodex.yml"}
+    names = {"CLAUDE.md"}
     return (
-        any(normalized.startswith(p) for p in _PLUGIN_PREFIXES)
-        or any(f"/{p}" in f"/{normalized}" for p in _PLUGIN_PREFIXES)
+        any(normalized.startswith(p) for p in prefixes)
+        or any(f"/{p}" in f"/{normalized}" for p in prefixes)
+        or normalized in files
+        or Path(normalized).name in names
         or normalized.endswith("reverse-index.md")
     )
 
@@ -241,7 +245,7 @@ def skipped_memory(
     Uncovered files become ``uncovered_file_without_memory``. Covered files
     whose hunks fall outside existing match regions become
     ``covered_file_without_memory_update``. Comment-only diffs, exclusions,
-    lockfile basenames, and in-change pinning updates are skipped.
+    lockfile basenames, install artefacts, and in-change pinning updates are skipped.
 
     Returns:
         Flag dicts with ``path``, ``reason``, and optional ``concepts``.

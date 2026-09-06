@@ -1,7 +1,8 @@
 """Pin first-touch skipped_memory rules for uncovered files.
 
 Substantive edits to files without a pinning concept require WRITE. Comments,
-lockfiles, and a successful write discharge do not leave skipped_memory armed.
+lockfiles, install artefacts, and a successful write discharge do not leave
+skipped_memory armed.
 """
 
 from __future__ import annotations
@@ -73,6 +74,26 @@ def test_writing_pinning_concept_discharges_first_touch(uncovered_repo: Path):
     assert _first_touch_entry(payload) is None
     assert "skipped_memory" not in payload["blocking_reasons"]
     assert payload["blocking"] is False
+
+
+def test_install_artifacts_do_not_arm_first_touch(uncovered_repo: Path):
+    from repocodex.commands.install import install
+
+    _shadow(uncovered_repo)
+    payload = install(uncovered_repo)
+    assert payload["ok"] is True
+    verdict = validate(uncovered_repo)
+    paths = [item["path"] for item in verdict["skipped_memory"]]
+    assert ".cursor/rules/repocodex.mdc" not in paths
+    assert "CLAUDE.md" not in paths
+    assert ".github/workflows/repocodex.yml" not in paths
+    assert verdict["blocking"] is False
+
+    (uncovered_repo / "src" / "app.py").write_text("def main():\n    return 2\n", encoding="utf-8")
+    after_source = validate(uncovered_repo)
+    source_paths = [item["path"] for item in after_source["skipped_memory"]]
+    assert "src/app.py" in source_paths
+    assert after_source["blocking"] is True
 
 
 def test_lockfile_and_gitignore_skip_first_touch(uncovered_repo: Path):

@@ -70,6 +70,14 @@ The system SHALL arm skipped-memory on (1) files that already contain at least o
 - **WHEN** a PR substantively changes that file without updating or writing memory and without a passing in-region attest
 - **THEN** the required check fails
 
+#### Scenario: Install artefacts do not arm first-touch
+
+- **GIVEN** a repository where `repocodex install` has written its distribution artefacts and no application source was edited
+- **WHEN** validation runs
+- **THEN** `skipped_memory` has no entry for those artefacts (Cursor rule, `CLAUDE.md` pointer, skills, plugin tree, pin-check Action)
+- **AND** `blocking` is not true solely because of the install
+- **AND** a substantive edit to an uncovered application source file in the same tree still arms first-touch
+
 ### Requirement: Rollout postures
 
 The system SHALL ship three configuration postures of the complete product — `shadow` (report every deterministic finding; block on undischarged `skipped_memory`; do not block on drift, `CLAIM_BROKEN`, contradiction, or index desync; collect metrics), `ratchet` (also enforce DRIFT, `CLAIM_BROKEN`, contradiction, and index desync), and `full` (`ratchet` plus scheduled audits) — selected in `.repocodex.toml`, with instrumentation for false-drift rate, rejection reasons, reconcile retries, tokens per turn, and validate latency.
